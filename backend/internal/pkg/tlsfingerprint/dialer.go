@@ -5,7 +5,10 @@ package tlsfingerprint
 import (
 	"bufio"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net"
@@ -30,6 +33,61 @@ type Profile struct {
 	KeyShareGroups      []uint16 // Empty uses [X25519]
 	PSKModes            []uint16 // Empty uses [psk_dhe_ke]
 	Extensions          []uint16 // Extension type IDs in order; empty uses default Node.js 24.x order
+}
+
+// FingerprintKey returns a stable, non-sensitive key for the effective TLS
+// profile configuration. It is used to prevent a cached Transport (and its
+// existing connections) from being reused after a profile changes.
+//
+// The display name is intentionally excluded because renaming a profile does
+// not change the ClientHello. Empty slices are normalized so nil and [] do not
+// create different cache entries.
+func (p *Profile) FingerprintKey() string {
+	if p == nil {
+		p = &Profile{}
+	}
+
+	canonical := struct {
+		EnableGREASE        bool     `json:"enable_grease"`
+		CipherSuites        []uint16 `json:"cipher_suites,omitempty"`
+		Curves              []uint16 `json:"curves,omitempty"`
+		PointFormats        []uint16 `json:"point_formats,omitempty"`
+		SignatureAlgorithms []uint16 `json:"signature_algorithms,omitempty"`
+		ALPNProtocols       []string `json:"alpn_protocols,omitempty"`
+		SupportedVersions   []uint16 `json:"supported_versions,omitempty"`
+		KeyShareGroups      []uint16 `json:"key_share_groups,omitempty"`
+		PSKModes            []uint16 `json:"psk_modes,omitempty"`
+		Extensions          []uint16 `json:"extensions,omitempty"`
+	}{
+		EnableGREASE:        p.EnableGREASE,
+		CipherSuites:        canonicalUint16Slice(p.CipherSuites),
+		Curves:              canonicalUint16Slice(p.Curves),
+		PointFormats:        canonicalUint16Slice(p.PointFormats),
+		SignatureAlgorithms: canonicalUint16Slice(p.SignatureAlgorithms),
+		ALPNProtocols:       canonicalStringSlice(p.ALPNProtocols),
+		SupportedVersions:   canonicalUint16Slice(p.SupportedVersions),
+		KeyShareGroups:      canonicalUint16Slice(p.KeyShareGroups),
+		PSKModes:            canonicalUint16Slice(p.PSKModes),
+		Extensions:          canonicalUint16Slice(p.Extensions),
+	}
+
+	encoded, _ := json.Marshal(canonical)
+	digest := sha256.Sum256(encoded)
+	return hex.EncodeToString(digest[:])
+}
+
+func canonicalUint16Slice(values []uint16) []uint16 {
+	if len(values) == 0 {
+		return nil
+	}
+	return values
+}
+
+func canonicalStringSlice(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	return values
 }
 
 // Dialer creates TLS connections with custom fingerprints.

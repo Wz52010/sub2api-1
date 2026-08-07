@@ -108,6 +108,47 @@ func TestTLSFingerprintHTTPSProxyFallsBackWithoutBypassingProxy(t *testing.T) {
 	require.Equal(t, "https://user:pass@proxy.example:8443", resolved.String())
 }
 
+func TestTLSCacheKeyIncludesProfileFingerprint(t *testing.T) {
+	base := &tlsfingerprint.Profile{
+		CipherSuites: []uint16{0x1301, 0x1302},
+	}
+	same := &tlsfingerprint.Profile{
+		Name:          "same-effective-profile",
+		CipherSuites:  []uint16{0x1301, 0x1302},
+	}
+	changed := &tlsfingerprint.Profile{
+		CipherSuites: []uint16{0x1301, 0x1303},
+	}
+
+	key1 := buildTLSCacheKey(config.ConnectionPoolIsolationAccount, directProxyKey, 7, upstreamProtocolModeDefault, base)
+	key2 := buildTLSCacheKey(config.ConnectionPoolIsolationAccount, directProxyKey, 7, upstreamProtocolModeDefault, same)
+	key3 := buildTLSCacheKey(config.ConnectionPoolIsolationAccount, directProxyKey, 7, upstreamProtocolModeDefault, changed)
+
+	require.Equal(t, key1, key2, "equivalent effective profiles should share a cache key")
+	require.NotEqual(t, key1, key3, "changed TLS fields must create a new cache key")
+}
+
+func TestTLSProfileChangeRebuildsClient(t *testing.T) {
+	upstream := NewHTTPUpstream(&config.Config{
+		Security: config.SecurityConfig{
+			URLAllowlist: config.URLAllowlistConfig{AllowPrivateHosts: true},
+		},
+	})
+	svc, ok := upstream.(*httpUpstreamService)
+	require.True(t, ok)
+
+	profileA := &tlsfingerprint.Profile{CipherSuites: []uint16{0x1301, 0x1302}}
+	profileB := &tlsfingerprint.Profile{CipherSuites: []uint16{0x1301, 0x1303}}
+	entryA, err := svc.getClientEntryWithTLS("", 7, 1, profileA, service.HTTPUpstreamProfileDefault, false, false)
+	require.NoError(t, err)
+	entryB, err := svc.getClientEntryWithTLS("", 7, 1, profileB, service.HTTPUpstreamProfileDefault, false, false)
+	require.NoError(t, err)
+	require.NotSame(t, entryA, entryB, "changing a TLS profile must rebuild the cached client")
+	entryC, err := svc.getClientEntryWithTLS("", 7, 1, profileA, service.HTTPUpstreamProfileDefault, false, false)
+	require.NoError(t, err)
+	require.Same(t, entryA, entryC, "the unchanged TLS profile should reuse its client")
+}
+
 func startTestSOCKS5Proxy(t *testing.T) (string, *atomic.Int64) {
 	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")

@@ -582,16 +582,28 @@ sudo systemctl status redis
 
 ## TLS Fingerprint Configuration
 
-Sub2API supports TLS fingerprint simulation to make requests appear as if they come from the official Claude CLI (Node.js client).
+Sub2API supports configurable TLS ClientHello parameters for compatibility testing with
+Node.js/Claude Code-like clients. This controls the outbound TLS handshake only; it does
+not grant upstream authorization, subscription eligibility, or a guaranteed result from
+any provider's account policy.
 
 > **💡 Tip:** Visit **[tls.sub2api.org](https://tls.sub2api.org/)** to get TLS fingerprint information for different devices and browsers.
 
 ### Default Behavior
 
-- Built-in `claude_cli_v2` profile simulates Node.js 20.x + OpenSSL 3.x
-- JA3 Hash: `1a28e69016765d92e3b381168d68922c`
-- JA4: `t13d5911h1_a33745022dd6_1f22a2ca17c4`
-- Profile selection: `accountID % profileCount`
+- The built-in profile uses the current Node.js 24.x-oriented defaults in the code.
+- A profile ID greater than `0` binds an account to one fixed database profile.
+- The legacy selector value `-1` now uses stable per-account rendezvous hashing;
+  it is not re-randomized on every request.
+- Changing a profile's TLS fields creates a new TLS client Transport instead of
+  reusing the old Transport and its existing connections.
+
+For the account-level proxy/IP isolation workflow, bind one proxy and one TLS profile
+to each account. Prefer `socks5h://` when supported so DNS resolution happens through
+the proxy. The proxy is the network path; the TLS profile controls the ClientHello.
+
+See [TLS_FINGERPRINT_CN.md](../docs/TLS_FINGERPRINT_CN.md) for the Chinese setup and
+verification checklist.
 
 ### Configuration
 

@@ -2,7 +2,8 @@ package service
 
 import (
 	"context"
-	"math/rand/v2"
+	"encoding/binary"
+	"hash/fnv"
 	"sync"
 	"time"
 
@@ -145,8 +146,9 @@ func (s *TLSFingerprintProfileService) GetProfileByID(id int64) *tlsfingerprint.
 	return nil
 }
 
-// getRandomProfile 从本地缓存中随机选择一个 Profile
-func (s *TLSFingerprintProfileService) getRandomProfile() *tlsfingerprint.Profile {
+// getStableProfile 根据账号 ID 稳定选择一个 Profile。
+// Rendezvous hashing 保证列表顺序不影响结果，新增模板也不会让所有账号重新分配。
+func (s *TLSFingerprintProfileService) getStableProfile(accountID int64) *tlsfingerprint.Profile {
 	s.localMu.RLock()
 	defer s.localMu.RUnlock()
 
@@ -154,18 +156,32 @@ func (s *TLSFingerprintProfileService) getRandomProfile() *tlsfingerprint.Profil
 		return nil
 	}
 
-	// 收集所有 profile
-	profiles := make([]*model.TLSFingerprintProfile, 0, len(s.localCache))
+	var selected *model.TLSFingerprintProfile
+	var selectedScore uint64
 	for _, p := range s.localCache {
-		if p != nil {
-			profiles = append(profiles, p)
+		if p == nil {
+			continue
+		}
+		score := stableProfileScore(accountID, p.ID)
+		if selected == nil || score > selectedScore || (score == selectedScore && p.ID < selected.ID) {
+			selected = p
+			selectedScore = score
 		}
 	}
-	if len(profiles) == 0 {
+	if selected == nil {
 		return nil
 	}
 
-	return profiles[rand.IntN(len(profiles))].ToTLSProfile()
+	return selected.ToTLSProfile()
+}
+
+func stableProfileScore(accountID, profileID int64) uint64 {
+	var input [16]byte
+	binary.BigEndian.PutUint64(input[:8], uint64(accountID))
+	binary.BigEndian.PutUint64(input[8:], uint64(profileID))
+	h := fnv.New64a()
+	_, _ = h.Write(input[:])
+	return h.Sum64()
 }
 
 // ResolveTLSProfile 根据 Account 的配置解析出运行时 TLS Profile
@@ -185,8 +201,8 @@ func (s *TLSFingerprintProfileService) ResolveTLSProfile(account *Account) *tlsf
 		}
 	}
 	if id == -1 {
-		// 随机选择一个 profile
-		if p := s.getRandomProfile(); p != nil {
+		// 兼容旧值 -1，但按账号稳定选择，避免同一账号在请求之间切换指纹。
+		if p := s.getStableProfile(account.ID); p != nil {
 			return p
 		}
 	}
