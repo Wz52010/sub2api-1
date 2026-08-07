@@ -188,6 +188,44 @@ func TestDialerWithProfile(t *testing.T) {
 	}
 }
 
+func TestFingerprintKeyIsStableAndTracksHandshakeConfiguration(t *testing.T) {
+	base := &Profile{
+		Name:         "display-name-a",
+		EnableGREASE: false,
+		CipherSuites: []uint16{0x1301, 0x1302},
+	}
+	renamed := *base
+	renamed.Name = "display-name-b"
+
+	if base.FingerprintKey() != renamed.FingerprintKey() {
+		t.Fatal("renaming a profile should not change its fingerprint key")
+	}
+	if base.FingerprintKey() != base.FingerprintKey() {
+		t.Fatal("fingerprint key must be stable across calls")
+	}
+
+	changed := *base
+	changed.CipherSuites = []uint16{0x1301, 0x1303}
+	if base.FingerprintKey() == changed.FingerprintKey() {
+		t.Fatal("changing a ClientHello field must change the fingerprint key")
+	}
+
+	withEmptySlices := &Profile{
+		CipherSuites: []uint16{},
+		Curves:       []uint16{},
+	}
+	if (&Profile{}).FingerprintKey() != withEmptySlices.FingerprintKey() {
+		t.Fatal("nil and empty slices should produce the same effective profile key")
+	}
+	if (&Profile{}).FingerprintKey() != nilProfileKey() {
+		t.Fatal("nil and empty profiles should use the same effective profile key")
+	}
+}
+
+func nilProfileKey() string {
+	return (*Profile)(nil).FingerprintKey()
+}
+
 // TestHTTPProxyDialerBasic tests HTTP proxy dialer creation.
 // Note: This is a unit test - actual proxy testing requires a proxy server.
 func TestHTTPProxyDialerBasic(t *testing.T) {
