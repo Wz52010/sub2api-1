@@ -135,8 +135,8 @@ func auditInteger(value any) (int64, bool) {
 	case float64:
 		return auditFloatInteger(v)
 	case json.Number:
-		v, err := v.Int64()
-		return v, err == nil
+		n, err := v.Int64()
+		return n, err == nil
 	default:
 		return 0, false
 	}
