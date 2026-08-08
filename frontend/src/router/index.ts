@@ -525,6 +525,18 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/admin/fingerprint-isolation',
+    name: 'AdminFingerprintIsolation',
+    component: () => import('@/views/admin/FingerprintIsolationView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Fingerprint & Connections',
+      titleKey: 'admin.fingerprintIsolation.title',
+      descriptionKey: 'admin.fingerprintIsolation.description'
+    }
+  },
+  {
     path: '/admin/announcements',
     name: 'AdminAnnouncements',
     component: () => import('@/views/admin/AnnouncementsView.vue'),
