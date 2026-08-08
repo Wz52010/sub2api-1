@@ -779,6 +779,25 @@ func (s *HTTPUpstreamSuite) TestNormalizeProxyURL_Canonicalizes() {
 	require.Equal(s.T(), key1, key2, "expected normalized proxy keys to match")
 }
 
+func (s *HTTPUpstreamSuite) TestNormalizeProxyURL_RedactsCredentialsButKeepsCredentialIsolation() {
+	key1, parsed1, err1 := normalizeProxyURL("http://user:password-a@proxy.local:8080")
+	key2, parsed2, err2 := normalizeProxyURL("http://user:password-a@proxy.local:8080/")
+	key3, _, err3 := normalizeProxyURL("http://user:password-b@proxy.local:8080")
+
+	require.NoError(s.T(), err1)
+	require.NoError(s.T(), err2)
+	require.NoError(s.T(), err3)
+	require.Equal(s.T(), key1, key2, "equivalent proxy credentials should share a cache scope")
+	require.NotEqual(s.T(), key1, key3, "different proxy credentials must not share a Transport")
+	require.NotContains(s.T(), key1, "password-a")
+	require.NotContains(s.T(), key1, "user:")
+	require.NotNil(s.T(), parsed1.User, "parsed proxy URL must retain credentials for Transport construction")
+	require.NotNil(s.T(), parsed2.User, "parsed proxy URL must retain credentials for Transport construction")
+	require.Equal(s.T(), "user", parsed1.User.Username())
+	password, _ := parsed1.User.Password()
+	require.Equal(s.T(), "password-a", password)
+}
+
 // TestAcquireClient_OverLimitReturnsError 测试连接池缓存上限保护
 // 验证超限且无可淘汰条目时返回错误
 func (s *HTTPUpstreamSuite) TestAcquireClient_OverLimitReturnsError() {

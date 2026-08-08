@@ -22,3 +22,10 @@ type HTTPUpstream interface {
 	// 支持按账号绑定的数据库 profile 或内置默认 profile。
 	DoWithTLS(req *http.Request, proxyURL string, accountID int64, accountConcurrency int, profile *tlsfingerprint.Profile) (*http.Response, error)
 }
+
+// HTTPUpstreamHealth is an optional read-only capability implemented by the
+// shared upstream transport. Keeping it separate from HTTPUpstream preserves
+// the lightweight interface used by gateway test doubles.
+type HTTPUpstreamHealth interface {
+	SnapshotTransportHealth(accountID int64) AccountTransportHealthSnapshot
+}

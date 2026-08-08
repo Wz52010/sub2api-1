@@ -78,6 +78,8 @@ func TestPromptAuditAdminOperationsUseOmittedBodiesAndAllowlistedDetails(t *test
 	router.PUT("/api/v1/admin/prompt-audit/config", func(c *gin.Context) {
 		SetAuditExtra(c, map[string]any{
 			"result": "failed", "error_code": "prompt_audit_config_conflict", "config_version": int64(9),
+			"account_id": int64(42), "binding_change_count": 2,
+			"proxy_id_change": "7 -> 9", "tls_fingerprint_enabled_change": "false -> true",
 			"token": "audit-canary-secret", "raw_prompt": "audit-canary-prompt", "nested": map[string]any{"unsafe": true},
 		})
 		c.JSON(http.StatusConflict, gin.H{"ok": false})
@@ -121,6 +123,10 @@ func TestPromptAuditAdminOperationsUseOmittedBodiesAndAllowlistedDetails(t *test
 	require.Equal(t, "failed", config.Extra["result"])
 	require.Equal(t, "prompt_audit_config_conflict", config.Extra["error_code"])
 	require.EqualValues(t, 9, config.Extra["config_version"])
+	require.EqualValues(t, 42, config.Extra["account_id"])
+	require.EqualValues(t, 2, config.Extra["binding_change_count"])
+	require.Equal(t, "7 -> 9", config.Extra["proxy_id_change"])
+	require.Equal(t, "false -> true", config.Extra["tls_fingerprint_enabled_change"])
 
 	probe := byAction["admin.prompt_audit.endpoint.probe"]
 	require.NotNil(t, probe)

@@ -121,6 +121,7 @@ var duplicateAccountDiscardedExtraKeys = map[string]struct{}{
 	"openai_compact_checked_at":              {},
 	"openai_compact_last_status":             {},
 	"openai_compact_last_error":              {},
+	AccountConnectionDiagnosticExtraKey:       {},
 	"antigravity_credits_overages":           {},
 	"antigravity_force_token_refresh":        {},
 	"antigravity_force_token_refresh_at":     {},
@@ -695,6 +696,7 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 			OllamaCloudUsageSessionExtraKey,
 			OllamaCloudUsageAutoRefreshExtraKey,
 			OllamaCloudUsageSnapshotExtraKey,
+			AccountConnectionDiagnosticExtraKey,
 		} {
 			if v, ok := account.Extra[key]; ok {
 				normalizedExtra[key] = v

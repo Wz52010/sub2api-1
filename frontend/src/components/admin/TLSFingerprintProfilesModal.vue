@@ -45,6 +45,15 @@
                 {{ t('admin.tlsFingerprintProfiles.columns.description') }}
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                {{ t('admin.tlsFingerprintProfiles.columns.client') }}
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                {{ t('admin.tlsFingerprintProfiles.columns.protocol') }}
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+                {{ t('admin.tlsFingerprintProfiles.columns.fingerprint') }}
+              </th>
+              <th class="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
                 {{ t('admin.tlsFingerprintProfiles.columns.grease') }}
               </th>
               <th class="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
@@ -65,6 +74,23 @@
                   {{ profile.description }}
                 </div>
                 <div v-else class="text-xs text-gray-400 dark:text-gray-600">—</div>
+              </td>
+              <td class="px-3 py-2 text-xs text-gray-600 dark:text-gray-300">
+                <div>{{ profile.metadata?.client_type || 'Custom' }}</div>
+                <div class="text-gray-400 dark:text-gray-500">
+                  {{ profile.metadata?.client_version_range || 'Unspecified' }}
+                </div>
+              </td>
+              <td class="px-3 py-2 text-xs text-gray-600 dark:text-gray-300">
+                <div>{{ profile.metadata?.tls_version_range || 'Default' }}</div>
+                <div class="text-gray-400 dark:text-gray-500">
+                  {{ profile.metadata?.alpn_preference || 'Default' }}
+                </div>
+              </td>
+              <td class="px-3 py-2">
+                <code class="text-xs text-gray-500 dark:text-gray-400" :title="profile.metadata?.fingerprint_key">
+                  {{ profile.metadata?.fingerprint_key?.slice(0, 12) || '—' }}
+                </code>
               </td>
               <td class="px-3 py-2">
                 <Icon

@@ -245,6 +245,88 @@ export async function testAccount(id: number): Promise<{
   return data
 }
 
+export interface AccountConnectionDiagnostic {
+  account_id: number
+  platform: string
+  target_host: string
+  proxy_configured: boolean
+  proxy_id?: number
+  proxy_endpoint?: string
+  proxy_exit_ip?: string
+  proxy_exit_ip_status: string
+  dns_status: string
+  dns_addresses?: string[]
+  tls_fingerprint_enabled: boolean
+  tls_profile_name?: string
+  fingerprint_key?: string
+  tls_handshake: boolean
+  tls_version?: string
+  alpn?: string
+  http_protocol?: string
+  http_status?: number
+  latency_ms?: number
+  success: boolean
+  failure_stage?: string
+  failure_message?: string
+  notes?: string[]
+  checked_at: string
+}
+
+/**
+ * Inspect the account's outbound network path without sending account credentials.
+ */
+export async function diagnoseConnection(id: number): Promise<AccountConnectionDiagnostic> {
+  const { data } = await apiClient.post<AccountConnectionDiagnostic>(`/admin/accounts/${id}/diagnose-connection`)
+  return data
+}
+
+/**
+ * Load the latest persisted connection diagnostic without probing the upstream.
+ */
+export async function getConnectionDiagnostic(
+  id: number
+): Promise<AccountConnectionDiagnostic | null> {
+  const { data } = await apiClient.get<AccountConnectionDiagnostic | null>(
+    `/admin/accounts/${id}/connection-diagnostic`
+  )
+  return data
+}
+
+export interface AccountTransportHealth {
+  account_id: number
+  requests_total: number
+  success_total: number
+  failure_total: number
+  transport_reuse_total: number
+  transport_create_total: number
+  transport_acquire_failure_total: number
+  proxy_connect_failure_total: number
+  tls_handshake_failure_total: number
+  http2_success_total: number
+  http2_fallback_total: number
+  http2_fallback_request_total: number
+  timeout_total: number
+  network_failure_total: number
+  last_failure_stage?: string
+  last_protocol_mode?: string
+  last_failure_at?: string
+  connection_identity_key?: string
+  connection_identity_target_host?: string
+  connection_identity_proxy_scope?: string
+  connection_identity_fingerprint_key?: string
+  connection_identity_protocol_mode?: string
+  connection_identity_generation?: number
+  connection_identity_changed_at?: string
+}
+
+/**
+ * Load process-local transport and protocol counters without making a request upstream.
+ */
+export async function getTransportHealth(id: number): Promise<AccountTransportHealth> {
+  const { data } = await apiClient.get<AccountTransportHealth>(`/admin/accounts/${id}/transport-health`)
+  return data
+}
+
 /**
  * Refresh account credentials
  * @param id - Account ID
@@ -951,6 +1033,9 @@ export const accountsAPI = {
   delete: deleteAccount,
   toggleStatus,
   testAccount,
+  diagnoseConnection,
+  getConnectionDiagnostic,
+  getTransportHealth,
   refreshCredentials,
   applyOAuthCredentials,
   getStats,

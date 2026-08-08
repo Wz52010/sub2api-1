@@ -2,15 +2,19 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AccountTestModal from '../AccountTestModal.vue'
 
-const { getAvailableModels, copyToClipboard } = vi.hoisted(() => ({
+const { getAvailableModels, getConnectionDiagnostic, getTransportHealth, copyToClipboard } = vi.hoisted(() => ({
   getAvailableModels: vi.fn(),
+  getConnectionDiagnostic: vi.fn(),
+  getTransportHealth: vi.fn(),
   copyToClipboard: vi.fn()
 }))
 
 vi.mock('@/api/admin', () => ({
   adminAPI: {
     accounts: {
-      getAvailableModels
+      getAvailableModels,
+      getConnectionDiagnostic,
+      getTransportHealth
     }
   }
 }))
@@ -88,11 +92,15 @@ function mountModal(account: Record<string, unknown> = {
 
 describe('AccountTestModal', () => {
   beforeEach(() => {
+    getConnectionDiagnostic.mockReset()
+    getTransportHealth.mockReset()
     getAvailableModels.mockResolvedValue([
       { id: 'gemini-2.0-flash', display_name: 'Gemini 2.0 Flash' },
       { id: 'gemini-2.5-flash-image', display_name: 'Gemini 2.5 Flash Image' },
       { id: 'gemini-3.1-flash-image', display_name: 'Gemini 3.1 Flash Image' }
     ])
+    getConnectionDiagnostic.mockResolvedValue(null)
+    getTransportHealth.mockResolvedValue({ account_id: 42 })
     copyToClipboard.mockReset()
     Object.defineProperty(globalThis, 'localStorage', {
       value: {
@@ -215,5 +223,29 @@ describe('AccountTestModal', () => {
       prompt: '',
       mode: 'compact'
     })
+  })
+
+  it('shows the credential-free proxy endpoint from the diagnostic', async () => {
+    getConnectionDiagnostic.mockResolvedValue({
+      account_id: 42,
+      platform: 'gemini',
+      target_host: 'generativelanguage.googleapis.com',
+      proxy_configured: true,
+      proxy_id: 7,
+      proxy_endpoint: 'socks5://proxy.local:1080',
+      proxy_exit_ip_status: 'observed',
+      dns_status: 'local_resolved',
+      tls_fingerprint_enabled: true,
+      tls_handshake: true,
+      success: true,
+      checked_at: '2026-08-08T00:00:00Z'
+    })
+
+    const wrapper = mountModal()
+    await wrapper.setProps({ show: true })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('socks5://proxy.local:1080')
+    expect(wrapper.text()).not.toContain('password-a')
   })
 })

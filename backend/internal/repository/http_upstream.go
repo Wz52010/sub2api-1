@@ -6,7 +6,9 @@ import (
 	"compress/flate"
 	"compress/gzip"
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -115,6 +117,7 @@ type upstreamClientEntry struct {
 	proxyKey     string       // 代理标识（用于检测代理变更）
 	poolKey      string       // 连接池配置标识（用于检测配置变更）
 	protocolMode string       // 协议模式（default/openai_h1/openai_h2/openai_h1_fallback）
+	fingerprintKey string     // 有效 TLS Profile 摘要；不包含 Profile 名称
 	lastUsed     int64        // 最后使用时间戳（纳秒），用于 LRU 淘汰
 	inFlight     int64        // 当前进行中的请求数，>0 时不可淘汰
 }
@@ -147,6 +150,8 @@ type httpUpstreamService struct {
 	cfg     *config.Config                  // 全局配置
 	mu      sync.RWMutex                    // 保护 clients map 的读写锁
 	clients map[string]*upstreamClientEntry // 客户端缓存池，key 由隔离策略决定
+	// transportHealth 只保存进程内的账号级连接健康摘要，不保存凭据或代理地址。
+	transportHealth *service.AccountTransportHealth
 	// OpenAI 走 HTTP/HTTPS 代理时的 H2->H1 回退状态（key=标准化 proxyKey）
 	openAIHTTP2Fallbacks sync.Map
 }
@@ -161,8 +166,9 @@ type httpUpstreamService struct {
 //   - service.HTTPUpstream 接口实现
 func NewHTTPUpstream(cfg *config.Config) service.HTTPUpstream {
 	return &httpUpstreamService{
-		cfg:     cfg,
-		clients: make(map[string]*upstreamClientEntry),
+		cfg:             cfg,
+		clients:         make(map[string]*upstreamClientEntry),
+		transportHealth: service.NewAccountTransportHealth(),
 	}
 }
 
@@ -184,30 +190,55 @@ func NewHTTPUpstream(cfg *config.Config) service.HTTPUpstream {
 //   - inFlight > 0 的客户端不会被淘汰，确保活跃请求不被中断
 func (s *httpUpstreamService) Do(req *http.Request, proxyURL string, accountID int64, accountConcurrency int) (*http.Response, error) {
 	applyGrokCLIProxyHeaders(req)
-	if err := s.validateRequestHost(req); err != nil {
-		return nil, err
-	}
 	profile := service.HTTPUpstreamProfileDefault
 	if req != nil {
 		profile = service.HTTPUpstreamProfileFromContext(req.Context())
+	}
+	if s.transportHealth != nil {
+		s.transportHealth.RecordRequest(accountID)
+	}
+	if err := s.validateRequestHost(req); err != nil {
+		if s.transportHealth != nil {
+			s.transportHealth.RecordFailure(accountID, "", err)
+		}
+		return nil, err
 	}
 
 	// 获取或创建对应的客户端，并标记请求占用
 	entry, err := s.acquireClientWithProfile(proxyURL, accountID, accountConcurrency, profile)
 	if err != nil {
+		if s.transportHealth != nil {
+			s.transportHealth.RecordTransportAcquireFailure(accountID, "", err)
+		}
 		return nil, err
 	}
+	if s.transportHealth != nil && entry.protocolMode == upstreamProtocolModeOpenAIH1Fallback {
+		s.transportHealth.RecordHTTP2FallbackRequest(accountID)
+	}
+	s.recordTransportIdentity(req, accountID, entry)
 
 	// 执行请求
 	client := httpClientForUpstreamRequest(entry.client, req)
 	client = httpClientWithGrokAccessDeniedFallback(client)
 	resp, err := servertiming.Do(client, req)
 	if err != nil {
+		if s.transportHealth != nil {
+			s.transportHealth.RecordFailure(accountID, entry.protocolMode, err)
+			if profile == service.HTTPUpstreamProfileOpenAI && entry.protocolMode == upstreamProtocolModeOpenAIH2 && isOpenAIHTTP2CompatibilityError(err) {
+				s.transportHealth.RecordHTTP2Fallback(accountID)
+			}
+		}
 		s.recordOpenAIHTTP2Failure(profile, entry.protocolMode, entry.proxyKey, err)
 		// 请求失败，立即减少计数
 		atomic.AddInt64(&entry.inFlight, -1)
 		atomic.StoreInt64(&entry.lastUsed, time.Now().UnixNano())
 		return nil, err
+	}
+	if s.transportHealth != nil {
+		s.transportHealth.RecordSuccess(accountID, entry.protocolMode)
+		if profile == service.HTTPUpstreamProfileOpenAI && entry.protocolMode == upstreamProtocolModeOpenAIH2 {
+			s.transportHealth.RecordHTTP2Success(accountID)
+		}
 	}
 	s.recordOpenAIHTTP2Success(profile, entry.protocolMode, entry.proxyKey)
 
@@ -242,6 +273,9 @@ func (s *httpUpstreamService) DoWithTLS(req *http.Request, proxyURL string, acco
 	if req != nil {
 		upstreamProfile = service.HTTPUpstreamProfileFromContext(req.Context())
 	}
+	if s.transportHealth != nil {
+		s.transportHealth.RecordRequest(accountID)
+	}
 
 	targetHost := ""
 	if req != nil && req.URL != nil {
@@ -249,28 +283,45 @@ func (s *httpUpstreamService) DoWithTLS(req *http.Request, proxyURL string, acco
 	}
 	proxyInfo := "direct"
 	if proxyURL != "" {
-		proxyInfo = proxyURL
+		if proxyKey, _, normalizeErr := normalizeProxyURL(proxyURL); normalizeErr == nil {
+			proxyInfo = proxyKey
+		} else {
+			proxyInfo = "[configured proxy]"
+		}
 	}
 	slog.Debug("tls_fingerprint_enabled", "account_id", accountID, "target", targetHost, "proxy", proxyInfo, "profile", profile.Name)
 
 	if err := s.validateRequestHost(req); err != nil {
+		if s.transportHealth != nil {
+			s.transportHealth.RecordFailure(accountID, "tls_fingerprint", err)
+		}
 		return nil, err
 	}
 
 	entry, err := s.acquireClientWithTLS(proxyURL, accountID, accountConcurrency, profile, upstreamProfile)
 	if err != nil {
+		if s.transportHealth != nil {
+			s.transportHealth.RecordTransportAcquireFailure(accountID, "tls_fingerprint", err)
+		}
 		slog.Debug("tls_fingerprint_acquire_client_failed", "account_id", accountID, "error", err)
 		return nil, err
 	}
+	s.recordTransportIdentity(req, accountID, entry)
 
 	client := httpClientForUpstreamRequest(entry.client, req)
 	client = httpClientWithGrokAccessDeniedFallback(client)
 	resp, err := servertiming.Do(client, req)
 	if err != nil {
+		if s.transportHealth != nil {
+			s.transportHealth.RecordFailure(accountID, "tls_fingerprint", err)
+		}
 		atomic.AddInt64(&entry.inFlight, -1)
 		atomic.StoreInt64(&entry.lastUsed, time.Now().UnixNano())
 		slog.Debug("tls_fingerprint_request_failed", "account_id", accountID, "error", err)
 		return nil, err
+	}
+	if s.transportHealth != nil {
+		s.transportHealth.RecordSuccess(accountID, "tls_fingerprint")
 	}
 
 	decompressResponseBody(resp)
@@ -281,6 +332,46 @@ func (s *httpUpstreamService) DoWithTLS(req *http.Request, proxyURL string, acco
 	})
 
 	return resp, nil
+}
+
+// SnapshotTransportHealth implements service.HTTPUpstreamHealth for the
+// read-only admin diagnostics endpoint.
+func (s *httpUpstreamService) SnapshotTransportHealth(accountID int64) service.AccountTransportHealthSnapshot {
+	if s == nil || s.transportHealth == nil {
+		return service.AccountTransportHealthSnapshot{AccountID: accountID}
+	}
+	return s.transportHealth.SnapshotTransportHealth(accountID)
+}
+
+func (s *httpUpstreamService) recordTransportReuse(accountID int64) {
+	if s != nil && s.transportHealth != nil {
+		s.transportHealth.RecordTransportReuse(accountID)
+	}
+}
+
+func (s *httpUpstreamService) recordTransportCreate(accountID int64) {
+	if s != nil && s.transportHealth != nil {
+		s.transportHealth.RecordTransportCreate(accountID)
+	}
+}
+
+func (s *httpUpstreamService) recordTransportIdentity(req *http.Request, accountID int64, entry *upstreamClientEntry) {
+	if s == nil || s.transportHealth == nil || entry == nil {
+		return
+	}
+	targetHost := ""
+	if req != nil && req.URL != nil {
+		targetHost = req.URL.Host
+	}
+	identity := service.NewAccountConnectionIdentity(
+		accountID,
+		targetHost,
+		entry.proxyKey,
+		entry.fingerprintKey,
+		entry.protocolMode,
+		entry.poolKey,
+	)
+	s.transportHealth.RecordConnectionIdentity(accountID, identity)
 }
 
 func httpClientForUpstreamRequest(client *http.Client, req *http.Request) *http.Client {
@@ -490,6 +581,7 @@ func (s *httpUpstreamService) getClientEntryWithTLS(proxyURL string, accountID i
 		atomic.StoreInt64(&entry.lastUsed, nowUnix)
 		if markInFlight {
 			atomic.AddInt64(&entry.inFlight, 1)
+			s.recordTransportReuse(accountID)
 		}
 		s.mu.RUnlock()
 		slog.Debug("tls_fingerprint_reusing_client", "account_id", accountID, "cache_key", cacheKey)
@@ -504,6 +596,7 @@ func (s *httpUpstreamService) getClientEntryWithTLS(proxyURL string, accountID i
 			atomic.StoreInt64(&entry.lastUsed, nowUnix)
 			if markInFlight {
 				atomic.AddInt64(&entry.inFlight, 1)
+				s.recordTransportReuse(accountID)
 			}
 			s.mu.Unlock()
 			slog.Debug("tls_fingerprint_reusing_client", "account_id", accountID, "cache_key", cacheKey)
@@ -542,13 +635,16 @@ func (s *httpUpstreamService) getClientEntryWithTLS(proxyURL string, accountID i
 	}
 
 	entry := &upstreamClientEntry{
-		client:   client,
-		proxyKey: proxyKey,
-		poolKey:  poolKey,
+		client:         client,
+		proxyKey:       proxyKey,
+		poolKey:        poolKey,
+		protocolMode:   upstreamProtocolModeDefault,
+		fingerprintKey: profile.FingerprintKey(),
 	}
 	atomic.StoreInt64(&entry.lastUsed, nowUnix)
 	if markInFlight {
 		atomic.StoreInt64(&entry.inFlight, 1)
+		s.recordTransportCreate(accountID)
 	}
 	s.clients[cacheKey] = entry
 
@@ -651,6 +747,7 @@ func (s *httpUpstreamService) getClientEntry(proxyURL string, accountID int64, a
 		atomic.StoreInt64(&entry.lastUsed, nowUnix)
 		if markInFlight {
 			atomic.AddInt64(&entry.inFlight, 1)
+			s.recordTransportReuse(accountID)
 		}
 		s.mu.RUnlock()
 		return entry, nil
@@ -664,6 +761,7 @@ func (s *httpUpstreamService) getClientEntry(proxyURL string, accountID int64, a
 			atomic.StoreInt64(&entry.lastUsed, nowUnix)
 			if markInFlight {
 				atomic.AddInt64(&entry.inFlight, 1)
+				s.recordTransportReuse(accountID)
 			}
 			s.mu.Unlock()
 			return entry, nil
@@ -701,6 +799,7 @@ func (s *httpUpstreamService) getClientEntry(proxyURL string, accountID int64, a
 	atomic.StoreInt64(&entry.lastUsed, nowUnix)
 	if markInFlight {
 		atomic.StoreInt64(&entry.inFlight, 1)
+		s.recordTransportCreate(accountID)
 	}
 	s.clients[cacheKey] = entry
 
@@ -1206,7 +1305,17 @@ func normalizeProxyURL(raw string) (string, *url.URL, error) {
 			parsed.Host = hostname
 		}
 	}
-	return parsed.String(), parsed, nil
+
+	// Keep credentials in the parsed URL used to build the Transport, but use
+	// only a stable digest of proxy auth in cache/log keys. This prevents proxy
+	// passwords from appearing in in-memory identity keys or debug output while
+	// still preventing two different proxy credentials from sharing a Transport.
+	keyURL := *parsed
+	if parsed.User != nil {
+		authDigest := sha256.Sum256([]byte(parsed.User.String()))
+		keyURL.User = url.User("auth-" + hex.EncodeToString(authDigest[:])[:16])
+	}
+	return keyURL.String(), parsed, nil
 }
 
 // defaultPoolSettings 获取默认连接池配置

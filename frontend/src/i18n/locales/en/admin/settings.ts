@@ -1318,6 +1318,9 @@ export default {
       columns: {
         name: 'Name',
         description: 'Description',
+        client: 'Client capability',
+        protocol: 'Protocol preference',
+        fingerprint: 'Fingerprint digest',
         grease: 'GREASE',
         alpn: 'ALPN',
         actions: 'Actions'

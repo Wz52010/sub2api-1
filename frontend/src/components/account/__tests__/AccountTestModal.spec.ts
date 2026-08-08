@@ -3,14 +3,18 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 import AccountTestModal from '../AccountTestModal.vue'
 
-const { getAvailableModelsMock } = vi.hoisted(() => ({
-  getAvailableModelsMock: vi.fn()
+const { getAvailableModelsMock, getConnectionDiagnosticMock, getTransportHealthMock } = vi.hoisted(() => ({
+  getAvailableModelsMock: vi.fn(),
+  getConnectionDiagnosticMock: vi.fn(),
+  getTransportHealthMock: vi.fn()
 }))
 
 vi.mock('@/api/admin', () => ({
   adminAPI: {
     accounts: {
-      getAvailableModels: getAvailableModelsMock
+      getAvailableModels: getAvailableModelsMock,
+      getConnectionDiagnostic: getConnectionDiagnosticMock,
+      getTransportHealth: getTransportHealthMock
     }
   }
 }))
@@ -99,9 +103,13 @@ describe('AccountTestModal', () => {
 
   beforeEach(() => {
     getAvailableModelsMock.mockReset()
+    getConnectionDiagnosticMock.mockReset()
+    getTransportHealthMock.mockReset()
     getAvailableModelsMock.mockResolvedValue([
       { id: 'gpt-5.4', display_name: 'GPT-5.4' }
     ])
+    getConnectionDiagnosticMock.mockResolvedValue(null)
+    getTransportHealthMock.mockResolvedValue({ account_id: 1 })
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       body: {
@@ -121,7 +129,7 @@ describe('AccountTestModal', () => {
   it('posts compact mode for OpenAI compact probe', async () => {
     const wrapper = mount(AccountTestModal, {
       props: {
-        show: true,
+        show: false,
         account: buildAccount()
       },
       global: {
@@ -134,6 +142,7 @@ describe('AccountTestModal', () => {
       }
     })
 
+    await wrapper.setProps({ show: true })
     await flushPromises()
     ;(wrapper.vm as any).selectedModelId = 'gpt-5.4'
     ;(wrapper.vm as any).testMode = 'compact'
@@ -188,5 +197,43 @@ describe('AccountTestModal', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('已通过 /v1/chat/completions 验证')
+  })
+
+  it('shows the credential-free proxy endpoint from the diagnostic', async () => {
+    getConnectionDiagnosticMock.mockResolvedValue({
+      account_id: 1,
+      platform: 'openai',
+      target_host: 'api.openai.com',
+      proxy_configured: true,
+      proxy_id: 7,
+      proxy_endpoint: 'http://proxy.local:8080',
+      proxy_exit_ip_status: 'observed',
+      dns_status: 'local_resolved',
+      tls_fingerprint_enabled: true,
+      tls_handshake: true,
+      success: true,
+      checked_at: '2026-08-08T00:00:00Z'
+    })
+
+    const wrapper = mount(AccountTestModal, {
+      props: {
+        show: false,
+        account: buildAccount()
+      },
+      global: {
+        stubs: {
+          BaseDialog: BaseDialogStub,
+          Select: SelectStub,
+          TextArea: TextAreaStub,
+          Icon: true
+        }
+      }
+    })
+
+    await wrapper.setProps({ show: true })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('http://proxy.local:8080')
+    expect(wrapper.text()).not.toContain('password-a')
   })
 })

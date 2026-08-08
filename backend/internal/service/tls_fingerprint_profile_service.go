@@ -74,12 +74,24 @@ func NewTLSFingerprintProfileService(
 
 // List 获取所有模板
 func (s *TLSFingerprintProfileService) List(ctx context.Context) ([]*model.TLSFingerprintProfile, error) {
-	return s.repo.List(ctx)
+	profiles, err := s.repo.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, profile := range profiles {
+		profile.RefreshMetadata()
+	}
+	return profiles, nil
 }
 
 // GetByID 根据 ID 获取模板
 func (s *TLSFingerprintProfileService) GetByID(ctx context.Context, id int64) (*model.TLSFingerprintProfile, error) {
-	return s.repo.GetByID(ctx, id)
+	profile, err := s.repo.GetByID(ctx, id)
+	if err != nil || profile == nil {
+		return profile, err
+	}
+	profile.RefreshMetadata()
+	return profile, nil
 }
 
 // Create 创建模板
@@ -97,6 +109,7 @@ func (s *TLSFingerprintProfileService) Create(ctx context.Context, profile *mode
 	defer cancel()
 	s.invalidateAndNotify(refreshCtx)
 
+	created.RefreshMetadata()
 	return created, nil
 }
 
@@ -115,6 +128,7 @@ func (s *TLSFingerprintProfileService) Update(ctx context.Context, profile *mode
 	defer cancel()
 	s.invalidateAndNotify(refreshCtx)
 
+	updated.RefreshMetadata()
 	return updated, nil
 }
 
