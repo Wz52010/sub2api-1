@@ -1,0 +1,24 @@
+# =============================================================================
+# Sub2API Custom Source Build Overlay
+# =============================================================================
+# Combine this file with docker-compose.local.yml or docker-compose.yml from
+# the repository root. It replaces the upstream image with an image built from
+# this checkout, so the official v0.1.172 source and local customizations ship
+# together.
+#
+# Example:
+# docker compose --env-file deploy/.env \
+#   -f deploy/docker-compose.local.yml \
+#   -f deploy/docker-compose.custom.yml \
+#   up -d --build
+# =============================================================================
+
+services:
+  sub2api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        VERSION: ${SUB2API_CUSTOM_VERSION:-0.1.172-custom}
+        COMMIT: ${SUB2API_CUSTOM_COMMIT:-custom}
+    image: ${SUB2API_CUSTOM_IMAGE:-sub2api-custom:0.1.172}
