@@ -24,6 +24,15 @@ export interface TLSFingerprintProfile {
   extensions: number[]
   created_at: string
   updated_at: string
+  metadata?: TLSFingerprintProfileMetadata
+}
+
+export interface TLSFingerprintProfileMetadata {
+  client_type: string
+  client_version_range: string
+  tls_version_range: string
+  alpn_preference: string
+  fingerprint_key: string
 }
 
 /**

@@ -2475,6 +2475,15 @@
               <option v-if="tlsFingerprintProfiles.length > 0" :value="-1">{{ t('admin.accounts.quotaControl.tlsFingerprint.randomProfile') }}</option>
               <option v-for="p in tlsFingerprintProfiles" :key="p.id" :value="p.id">{{ p.name }}</option>
             </select>
+            <p v-if="selectedTLSFingerprintProfile?.metadata" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              {{ selectedTLSFingerprintProfile.metadata.client_type }} ·
+              {{ selectedTLSFingerprintProfile.metadata.client_version_range }} ·
+              {{ selectedTLSFingerprintProfile.metadata.tls_version_range }} ·
+              ALPN: {{ selectedTLSFingerprintProfile.metadata.alpn_preference }}
+            </p>
+            <p v-else-if="tlsFingerprintProfileId === -1" class="mt-2 text-xs text-amber-600 dark:text-amber-400">
+              {{ t('admin.accounts.quotaControl.tlsFingerprint.stableAssignmentHint') }}
+            </p>
           </div>
         </div>
 
@@ -2715,6 +2724,7 @@ import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 import { adminAPI } from '@/api/admin'
+import type { TLSFingerprintProfile } from '@/api/admin/tlsFingerprintProfile'
 import { useQuotaNotifyState } from '@/composables/useQuotaNotifyState'
 import type {
   Account,
@@ -2958,7 +2968,10 @@ const umqModeOptions = computed(() => [
 ])
 const tlsFingerprintEnabled = ref(false)
 const tlsFingerprintProfileId = ref<number | null>(null)
-const tlsFingerprintProfiles = ref<{ id: number; name: string }[]>([])
+const tlsFingerprintProfiles = ref<Pick<TLSFingerprintProfile, 'id' | 'name' | 'metadata'>[]>([])
+const selectedTLSFingerprintProfile = computed(() =>
+  tlsFingerprintProfiles.value.find(profile => profile.id === tlsFingerprintProfileId.value) ?? null
+)
 const sessionIdMaskingEnabled = ref(false)
 const cacheTTLOverrideEnabled = ref(false)
 const cacheTTLOverrideTarget = ref<string>('5m')
@@ -3723,7 +3736,7 @@ const syncFormFromAccount = (newAccount: Account | null) => {
 async function loadTLSProfiles() {
   try {
     const profiles = await adminAPI.tlsFingerprintProfiles.list()
-    tlsFingerprintProfiles.value = profiles.map(p => ({ id: p.id, name: p.name }))
+    tlsFingerprintProfiles.value = profiles.map(p => ({ id: p.id, name: p.name, metadata: p.metadata }))
   } catch {
     tlsFingerprintProfiles.value = []
   }

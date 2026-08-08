@@ -131,6 +131,186 @@
         </button>
       </div>
 
+      <div
+        v-if="diagnosticResult || diagnosticError"
+        class="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-dark-500 dark:bg-dark-700/60"
+      >
+        <div class="flex items-center justify-between gap-3">
+          <div class="text-sm font-semibold text-gray-800 dark:text-gray-100">
+            {{ t('admin.accounts.diagnosticTitle') }}
+          </div>
+          <div v-if="diagnosticResult" class="text-right text-xs">
+            <span
+              :class="diagnosticResult.success ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+              class="block font-medium"
+            >
+              {{ diagnosticResult.success ? t('admin.accounts.diagnosticSuccess') : t('admin.accounts.diagnosticFailed') }}
+            </span>
+            <span class="block text-gray-500 dark:text-gray-400">
+              {{ t('admin.accounts.diagnosticLastChecked', { time: formatDiagnosticTime(diagnosticResult.checked_at) }) }}
+            </span>
+          </div>
+        </div>
+        <div v-if="diagnosticError" class="text-sm text-red-600 dark:text-red-400">
+          {{ diagnosticError }}
+        </div>
+        <dl v-if="diagnosticResult" class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
+          <div>
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.diagnosticTarget') }}</dt>
+            <dd class="font-medium text-gray-800 dark:text-gray-100">{{ diagnosticResult.target_host }}</dd>
+          </div>
+          <div>
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.diagnosticProxy') }}</dt>
+            <dd class="font-medium text-gray-800 dark:text-gray-100">
+              {{ diagnosticResult.proxy_configured ? `#${diagnosticResult.proxy_id ?? '-'}` : t('admin.accounts.diagnosticDirect') }}
+            </dd>
+          </div>
+          <div v-if="diagnosticResult.proxy_endpoint">
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.diagnosticProxyEndpoint') }}</dt>
+            <dd class="break-all font-medium text-gray-800 dark:text-gray-100">
+              {{ diagnosticResult.proxy_endpoint }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.diagnosticExitIP') }}</dt>
+            <dd class="font-medium text-gray-800 dark:text-gray-100">
+              {{ diagnosticResult.proxy_exit_ip || t('admin.accounts.diagnosticUnavailable') }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.diagnosticDNS') }}</dt>
+            <dd class="font-medium text-gray-800 dark:text-gray-100">
+              {{ formatDiagnosticStatus(diagnosticResult.dns_status) }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.diagnosticTLS') }}</dt>
+            <dd class="font-medium text-gray-800 dark:text-gray-100">
+              {{ diagnosticResult.tls_version || t('admin.accounts.diagnosticNotObserved') }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.diagnosticALPN') }}</dt>
+            <dd class="font-medium text-gray-800 dark:text-gray-100">
+              {{ diagnosticResult.alpn || t('admin.accounts.diagnosticNotObserved') }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.diagnosticHTTP') }}</dt>
+            <dd class="font-medium text-gray-800 dark:text-gray-100">
+              {{ diagnosticResult.http_protocol || t('admin.accounts.diagnosticNotObserved') }}
+              <span v-if="diagnosticResult.http_status">({{ diagnosticResult.http_status }})</span>
+            </dd>
+          </div>
+          <div>
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.diagnosticProfile') }}</dt>
+            <dd class="truncate font-medium text-gray-800 dark:text-gray-100">
+              {{ diagnosticResult.tls_profile_name || t('admin.accounts.diagnosticNotObserved') }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.latency') }}</dt>
+            <dd class="font-medium text-gray-800 dark:text-gray-100">
+              {{ diagnosticResult.latency_ms ?? '-' }} ms
+            </dd>
+          </div>
+        </dl>
+        <div v-if="diagnosticResult?.failure_message" class="text-xs text-red-600 dark:text-red-400">
+          {{ formatDiagnosticFailureStage(diagnosticResult.failure_stage) }}: {{ diagnosticResult.failure_message }}
+        </div>
+        <ul v-if="diagnosticResult?.notes?.length" class="space-y-1 text-xs text-gray-500 dark:text-gray-400">
+          <li v-for="note in diagnosticResult.notes" :key="note">{{ note }}</li>
+        </ul>
+        <p class="text-[11px] text-gray-500 dark:text-gray-400">
+          {{ t('admin.accounts.diagnosticDisclaimer') }}
+        </p>
+      </div>
+
+      <div
+        v-if="transportHealthLoading || transportHealth || transportHealthError"
+        class="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-dark-500 dark:bg-dark-700/60"
+      >
+        <div class="flex items-center justify-between gap-3">
+          <div class="text-sm font-semibold text-gray-800 dark:text-gray-100">
+            {{ t('admin.accounts.transportHealthTitle') }}
+          </div>
+          <span class="text-[11px] text-gray-500 dark:text-gray-400">
+            {{ t('admin.accounts.transportHealthRuntime') }}
+          </span>
+        </div>
+        <div v-if="transportHealthLoading" class="text-xs text-gray-500 dark:text-gray-400">
+          {{ t('admin.accounts.transportHealthLoading') }}
+        </div>
+        <div v-else-if="transportHealthError" class="text-sm text-red-600 dark:text-red-400">
+          {{ transportHealthError }}
+        </div>
+        <dl v-else-if="transportHealth" class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
+          <div>
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.transportHealthRequests') }}</dt>
+            <dd class="font-medium text-gray-800 dark:text-gray-100">{{ transportHealth.requests_total }}</dd>
+          </div>
+          <div>
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.transportHealthResults') }}</dt>
+            <dd class="font-medium text-gray-800 dark:text-gray-100">
+              {{ transportHealth.success_total }} / {{ transportHealth.failure_total }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.transportHealthPool') }}</dt>
+            <dd class="font-medium text-gray-800 dark:text-gray-100">
+              {{ transportHealth.transport_reuse_total }} / {{ transportHealth.transport_create_total }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.transportHealthHTTP2') }}</dt>
+            <dd class="font-medium text-gray-800 dark:text-gray-100">
+              {{ transportHealth.http2_success_total }} / {{ transportHealth.http2_fallback_total }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.transportHealthFailures') }}</dt>
+            <dd class="font-medium text-gray-800 dark:text-gray-100">
+              {{ transportHealth.proxy_connect_failure_total }} /
+              {{ transportHealth.tls_handshake_failure_total }} /
+              {{ transportHealth.timeout_total }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.transportHealthProtocol') }}</dt>
+            <dd class="font-medium text-gray-800 dark:text-gray-100">
+              {{ formatTransportProtocol(transportHealth.last_protocol_mode) }}
+            </dd>
+          </div>
+          <div v-if="transportHealth.connection_identity_key">
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.transportHealthIdentity') }}</dt>
+            <dd class="font-medium text-gray-800 dark:text-gray-100">
+              {{ transportHealth.connection_identity_key.slice(0, 16) }} · {{ transportHealth.connection_identity_generation }}
+            </dd>
+          </div>
+          <div v-if="transportHealth.connection_identity_target_host">
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.transportHealthIdentityTarget') }}</dt>
+            <dd class="font-medium text-gray-800 dark:text-gray-100">
+              {{ transportHealth.connection_identity_target_host }}
+            </dd>
+          </div>
+          <div v-if="transportHealth.last_failure_stage">
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.transportHealthLastFailure') }}</dt>
+            <dd class="font-medium text-gray-800 dark:text-gray-100">
+              {{ formatTransportHealthStage(transportHealth.last_failure_stage) }}
+            </dd>
+          </div>
+          <div v-if="transportHealth.last_failure_at">
+            <dt class="text-gray-500 dark:text-gray-400">{{ t('admin.accounts.transportHealthLastFailureAt') }}</dt>
+            <dd class="font-medium text-gray-800 dark:text-gray-100">
+              {{ formatDiagnosticTime(transportHealth.last_failure_at) }}
+            </dd>
+          </div>
+        </dl>
+        <p class="text-[11px] text-gray-500 dark:text-gray-400">
+          {{ t('admin.accounts.transportHealthDisclaimer') }}
+        </p>
+      </div>
+
       <div v-if="generatedImages.length > 0" class="space-y-2">
         <div class="text-xs font-medium text-gray-600 dark:text-gray-300">
           {{ t('admin.accounts.imagePreview') }}
@@ -204,6 +384,15 @@
           {{ t('common.close') }}
         </button>
         <button
+          @click="runDiagnostic"
+          :disabled="diagnosticLoading || status === 'connecting'"
+          class="flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-dark-600 dark:text-gray-300 dark:hover:bg-dark-500"
+        >
+          <Icon v-if="diagnosticLoading" name="refresh" size="sm" class="animate-spin" :stroke-width="2" />
+          <Icon v-else name="globe" size="sm" :stroke-width="2" />
+          <span>{{ diagnosticLoading ? t('admin.accounts.diagnosingConnection') : t('admin.accounts.diagnoseConnection') }}</span>
+        </button>
+        <button
           @click="startTest"
           :disabled="status === 'connecting' || !selectedModelId"
           :class="[
@@ -252,6 +441,7 @@ import { useClipboard } from '@/composables/useClipboard'
 import { buildApiUrl } from '@/api/client'
 import { adminAPI } from '@/api/admin'
 import type { Account, ClaudeModel } from '@/types'
+import type { AccountConnectionDiagnostic, AccountTransportHealth } from '@/api/admin/accounts'
 
 const { t } = useI18n()
 const { copyToClipboard } = useClipboard()
@@ -286,6 +476,12 @@ const testPrompt = ref('')
 const loadingModels = ref(false)
 let abortController: AbortController | null = null
 const generatedImages = ref<PreviewImage[]>([])
+const diagnosticResult = ref<AccountConnectionDiagnostic | null>(null)
+const diagnosticError = ref('')
+const diagnosticLoading = ref(false)
+const transportHealth = ref<AccountTransportHealth | null>(null)
+const transportHealthError = ref('')
+const transportHealthLoading = ref(false)
 const testMode = ref<'default' | 'compact'>('default')
 const isOpenAIAccount = computed(() => props.account?.platform === 'openai')
 const openAITestModeOptions = computed(() => [
@@ -328,7 +524,9 @@ watch(
       testPrompt.value = ''
       testMode.value = 'default'
       resetState()
-      await loadAvailableModels()
+      transportHealth.value = null
+      transportHealthError.value = ''
+      await Promise.all([loadAvailableModels(), loadLastDiagnostic(), loadTransportHealth()])
     } else {
       abortStream()
     }
@@ -378,6 +576,8 @@ const resetState = () => {
   errorMessage.value = ''
   generatedImages.value = []
   previewImageUrl.value = ''
+  diagnosticResult.value = null
+  diagnosticError.value = ''
 }
 
 const handleClose = () => {
@@ -389,6 +589,123 @@ const abortStream = () => {
   if (abortController) {
     abortController.abort()
     abortController = null
+  }
+}
+
+const runDiagnostic = async () => {
+  if (!props.account || diagnosticLoading.value) return
+  diagnosticLoading.value = true
+  diagnosticResult.value = null
+  diagnosticError.value = ''
+  try {
+    diagnosticResult.value = await adminAPI.accounts.diagnoseConnection(props.account.id)
+  } catch (error: unknown) {
+    diagnosticError.value = error instanceof Error ? error.message : t('admin.accounts.diagnosticFailed')
+  } finally {
+    diagnosticLoading.value = false
+  }
+}
+
+const loadLastDiagnostic = async () => {
+  if (!props.account) return
+  try {
+    diagnosticResult.value = await adminAPI.accounts.getConnectionDiagnostic(props.account.id)
+  } catch (error) {
+    // An unavailable optional snapshot should not prevent account testing.
+    console.warn('Failed to load the last connection diagnostic:', error)
+  }
+}
+
+const loadTransportHealth = async () => {
+  if (!props.account) return
+  transportHealthLoading.value = true
+  transportHealthError.value = ''
+  try {
+    transportHealth.value = await adminAPI.accounts.getTransportHealth(props.account.id)
+  } catch (error) {
+    console.warn('Failed to load transport health:', error)
+    transportHealthError.value = t('admin.accounts.transportHealthUnavailable')
+  } finally {
+    transportHealthLoading.value = false
+  }
+}
+
+const formatDiagnosticTime = (value: string) => {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  }).format(date)
+}
+
+const formatDiagnosticStatus = (status: string) => {
+  switch (status) {
+    case 'local_resolved':
+      return t('admin.accounts.diagnosticStatusLocalResolved')
+    case 'lookup_failed':
+      return t('admin.accounts.diagnosticStatusLookupFailed')
+    case 'observed':
+      return t('admin.accounts.diagnosticStatusObserved')
+    case 'probe_failed':
+      return t('admin.accounts.diagnosticStatusProbeFailed')
+    case 'not_observed':
+      return t('admin.accounts.diagnosticStatusNotObserved')
+    default:
+      return t('admin.accounts.diagnosticStatusNotChecked')
+  }
+}
+
+const formatDiagnosticFailureStage = (stage?: string) => {
+  switch (stage) {
+    case 'dns':
+      return t('admin.accounts.diagnosticFailureDNS')
+    case 'proxy_or_tcp':
+      return t('admin.accounts.diagnosticFailureProxy')
+    case 'tls':
+      return t('admin.accounts.diagnosticFailureTLS')
+    case 'timeout':
+      return t('admin.accounts.diagnosticFailureTimeout')
+    case 'http_request':
+      return t('admin.accounts.diagnosticFailureHTTP')
+    default:
+      return t('admin.accounts.diagnosticFailureUnknown')
+  }
+}
+
+const formatTransportHealthStage = (stage?: string) => {
+  switch (stage) {
+    case 'transport_acquire':
+      return t('admin.accounts.transportHealthStageAcquire')
+    case 'proxy_connect':
+      return t('admin.accounts.transportHealthStageProxy')
+    case 'tls_handshake':
+      return t('admin.accounts.transportHealthStageTLS')
+    case 'http2':
+      return t('admin.accounts.transportHealthStageHTTP2')
+    case 'timeout':
+      return t('admin.accounts.transportHealthStageTimeout')
+    case 'network':
+      return t('admin.accounts.transportHealthStageNetwork')
+    case 'request':
+      return t('admin.accounts.transportHealthStageRequest')
+    default:
+      return t('admin.accounts.transportHealthNone')
+  }
+}
+
+const formatTransportProtocol = (mode?: string) => {
+  switch (mode) {
+    case 'openai_h1':
+      return 'HTTP/1.1'
+    case 'openai_h2':
+      return 'HTTP/2'
+    case 'openai_h1_fallback':
+      return t('admin.accounts.transportHealthHTTP1Fallback')
+    case 'default':
+      return t('admin.accounts.transportHealthDefaultProtocol')
+    default:
+      return mode || t('admin.accounts.transportHealthNone')
   }
 }
 
@@ -542,6 +859,7 @@ const handleEvent = (event: {
         status.value = 'error'
         errorMessage.value = event.error || 'Test failed'
       }
+      void loadTransportHealth()
       break
 
     case 'error':
@@ -551,6 +869,7 @@ const handleEvent = (event: {
         addLine(streamingContent.value, 'text-green-300')
         streamingContent.value = ''
       }
+      void loadTransportHealth()
       break
   }
 }

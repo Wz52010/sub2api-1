@@ -208,6 +208,7 @@ func (r *tlsFingerprintProfileRepository) toModel(e *ent.TLSFingerprintProfile) 
 	if p.Extensions == nil {
 		p.Extensions = []uint16{}
 	}
+	p.RefreshMetadata()
 
 	return p
 }

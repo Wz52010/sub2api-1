@@ -27,6 +27,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/timezone"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
+	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -64,6 +65,7 @@ type AccountHandler struct {
 	grokImportProber        grokImportProber
 	upstreamBillingProbe    *service.UpstreamBillingProbeService
 	ollamaCloudUsage        *service.OllamaCloudUsageService
+	httpUpstream             service.HTTPUpstream
 }
 
 // SetUpstreamBillingProbeService attaches the optional remote billing probe service.
@@ -73,6 +75,12 @@ func (h *AccountHandler) SetUpstreamBillingProbeService(probe *service.UpstreamB
 
 func (h *AccountHandler) SetOllamaCloudUsageService(usage *service.OllamaCloudUsageService) {
 	h.ollamaCloudUsage = usage
+}
+
+// SetHTTPUpstream attaches the shared outbound transport for read-only
+// account connection health snapshots.
+func (h *AccountHandler) SetHTTPUpstream(upstream service.HTTPUpstream) {
+	h.httpUpstream = upstream
 }
 
 // NewAccountHandler creates a new admin account handler
@@ -973,6 +981,18 @@ func (h *AccountHandler) Update(c *gin.Context) {
 
 	// 确定是否跳过混合渠道检查
 	skipCheck := req.ConfirmMixedChannelRisk != nil && *req.ConfirmMixedChannelRisk
+	// UpdateAccount 内部会再次读取账号。这里额外保留更新前快照，
+	// 仅用于审计代理/TLS 绑定变化；读取失败不阻断正常更新。
+	var before *service.Account
+	if h.adminService != nil {
+		before, err = h.adminService.GetAccount(c.Request.Context(), accountID)
+		if err != nil {
+			slog.Warn("account_binding_audit_snapshot_failed", "account_id", accountID, "error", err)
+			before = nil
+		} else {
+			before = service.AccountBindingAuditSnapshot(before)
+		}
+	}
 
 	account, err := h.adminService.UpdateAccount(c.Request.Context(), accountID, &service.UpdateAccountInput{
 		Name:                  req.Name,
@@ -1014,6 +1034,7 @@ func (h *AccountHandler) Update(c *gin.Context) {
 	if len(req.Credentials) > 0 {
 		h.scheduleOpenAIResponsesProbe(account)
 	}
+	middleware2.SetAuditExtra(c, service.AccountBindingChangeAuditExtra(before, account))
 
 	response.Success(c, h.buildAccountResponseWithRuntime(c.Request.Context(), account))
 }
@@ -1114,6 +1135,71 @@ func (h *AccountHandler) Test(c *gin.Context) {
 			_ = c.Error(err)
 		}
 	}
+}
+
+// DiagnoseConnection checks the account's outbound network path without
+// sending account credentials or a model request.
+// POST /api/v1/admin/accounts/:id/diagnose-connection
+func (h *AccountHandler) DiagnoseConnection(c *gin.Context) {
+	accountID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "Invalid account ID")
+		return
+	}
+	if h.accountTestService == nil {
+		response.ErrorFrom(c, errors.New("account connection diagnostic is not configured"))
+		return
+	}
+
+	result, err := h.accountTestService.DiagnoseAccountConnection(c.Request.Context(), accountID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
+// GetConnectionDiagnostic returns the latest persisted read-only network-path
+// diagnostic without making a new outbound request.
+// GET /api/v1/admin/accounts/:id/connection-diagnostic
+func (h *AccountHandler) GetConnectionDiagnostic(c *gin.Context) {
+	accountID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "Invalid account ID")
+		return
+	}
+	if h.accountTestService == nil {
+		response.ErrorFrom(c, errors.New("account connection diagnostic is not configured"))
+		return
+	}
+
+	result, err := h.accountTestService.GetLastAccountConnectionDiagnostic(c.Request.Context(), accountID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
+// GetTransportHealth returns process-local transport and protocol counters for
+// one account. It never makes an outbound request.
+// GET /api/v1/admin/accounts/:id/transport-health
+func (h *AccountHandler) GetTransportHealth(c *gin.Context) {
+	accountID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || accountID <= 0 {
+		response.BadRequest(c, "Invalid account ID")
+		return
+	}
+	if h.httpUpstream == nil {
+		response.Error(c, http.StatusServiceUnavailable, "account transport health is not configured")
+		return
+	}
+	health, ok := h.httpUpstream.(service.HTTPUpstreamHealth)
+	if !ok {
+		response.Error(c, http.StatusServiceUnavailable, "account transport health is not supported")
+		return
+	}
+	response.Success(c, health.SnapshotTransportHealth(accountID))
 }
 
 // RecoverState handles unified recovery of recoverable account runtime state.

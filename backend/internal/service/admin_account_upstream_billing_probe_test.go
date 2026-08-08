@@ -189,6 +189,34 @@ func TestUpdateAccountPreservesManagedUpstreamBillingProbeStateForUnrelatedEdit(
 	require.Equal(t, "value", updated.Extra["custom"])
 }
 
+func TestUpdateAccountPreservesConnectionDiagnosticForUnrelatedEdit(t *testing.T) {
+	accountID := int64(115)
+	diagnostic := map[string]any{
+		"account_id": accountID,
+		"success":    true,
+		"checked_at": "2026-08-07T00:00:00Z",
+	}
+	repo := &upstreamBillingProbeAccountRepo{accounts: map[int64]*Account{
+		accountID: {
+			ID:       accountID,
+			Platform: PlatformOpenAI,
+			Type:     AccountTypeAPIKey,
+			Status:   StatusActive,
+			Extra: map[string]any{
+				AccountConnectionDiagnosticExtraKey: diagnostic,
+			},
+		},
+	}}
+
+	updated, err := (&adminServiceImpl{accountRepo: repo}).UpdateAccount(context.Background(), accountID, &UpdateAccountInput{
+		Extra: map[string]any{"custom": "value"},
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, diagnostic, updated.Extra[AccountConnectionDiagnosticExtraKey])
+	require.Equal(t, "value", updated.Extra["custom"])
+}
+
 func TestUpdateAccountPreservesGrokBillingSnapshotForUnrelatedEdit(t *testing.T) {
 	accountID := int64(112)
 	billing := &xai.BillingSummary{

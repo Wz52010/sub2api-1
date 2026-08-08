@@ -1398,6 +1398,9 @@ export default {
       columns: {
         name: '名称',
         description: '描述',
+        client: '客户端能力',
+        protocol: '协议偏好',
+        fingerprint: '指纹摘要',
         grease: 'GREASE',
         alpn: 'ALPN',
         actions: '操作'
