@@ -46,6 +46,8 @@ var cursorResponsesUnsupportedFields = []string{
 // 这些上游普遍只支持 /v1/chat/completions，无 /v1/responses 端点。
 //
 // 当前路由策略（基于账号覆盖模式/探测标记，详见 openai_compat.ShouldUseResponsesAPI）：
+//   - APIKey 账号开启自动透传 → 直接转发到 /v1/chat/completions，避免协议
+//     往返转换改变请求体、token 统计和上游响应结构
 //   - APIKey 账号 + 强制或探测确认不支持 Responses → 走 forwardAsRawChatCompletions
 //     直转上游 /v1/chat/completions，不做协议转换
 //   - 其他所有情况（OAuth、APIKey 强制/探测确认支持、未探测）→ 走原有 CC→Responses
@@ -84,6 +86,14 @@ func (s *OpenAIGatewayService) ForwardAsChatCompletions(
 				)
 			}
 		}
+		return s.forwardAsRawChatCompletions(ctx, c, account, body, defaultMappedModel)
+	}
+
+	// API Key 自动透传必须对 Chat Completions 同样生效。此前该开关只覆盖
+	// /v1/responses，导致 /v1/chat/completions 仍执行 CC→Responses→CC 转换，
+	// 不仅改变响应结构，还会显著放大上游输入 token。OAuth 上游通常只支持
+	// Responses，因此这里只对标准 OpenAI API Key 账号启用原生 CC 直转。
+	if account.Platform == PlatformOpenAI && account.Type == AccountTypeAPIKey && account.IsOpenAIPassthroughEnabled() {
 		return s.forwardAsRawChatCompletions(ctx, c, account, body, defaultMappedModel)
 	}
 
