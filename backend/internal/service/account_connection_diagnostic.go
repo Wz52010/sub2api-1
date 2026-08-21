@@ -54,8 +54,30 @@ type AccountConnectionDiagnostic struct {
 	FailureStage          string    `json:"failure_stage,omitempty"`
 	FailureMessage        string    `json:"failure_message,omitempty"`
 	Notes                 []string  `json:"notes,omitempty"`
+	// CoherenceStatus / CoherenceFindings 为只读的出站身份一致性评估结果:对比"被模拟的
+	// 客户端身份"与"实际协商到的协议/指纹"。完全基于已采集字段分析,不发起新请求,
+	// 也不改变任何转发行为。
+	CoherenceStatus       string                       `json:"coherence_status,omitempty"`
+	CoherenceFindings     []ConnectionCoherenceFinding `json:"coherence_findings,omitempty"`
 	CheckedAt             time.Time `json:"checked_at"`
 }
+
+// ConnectionCoherenceFinding 描述一条出站身份一致性发现(只读,不影响转发路径)。
+type ConnectionCoherenceFinding struct {
+	Code       string `json:"code"`
+	Severity   string `json:"severity"` // info | warning
+	Message    string `json:"message"`
+	Suggestion string `json:"suggestion,omitempty"`
+}
+
+const (
+	coherenceSeverityInfo    = "info"
+	coherenceSeverityWarning = "warning"
+
+	coherenceStatusNotChecked = "not_checked"
+	coherenceStatusCoherent   = "coherent"
+	coherenceStatusWarning    = "warning"
+)
 
 // DiagnoseAccountConnection checks the network path without sending account
 // credentials or a model request. A provider response of 401/403/404 still
@@ -228,6 +250,7 @@ func (s *AccountTestService) GetLastAccountConnectionDiagnostic(ctx context.Cont
 }
 
 func (s *AccountTestService) finishAccountConnectionDiagnostic(result *AccountConnectionDiagnostic) *AccountConnectionDiagnostic {
+	evaluateConnectionCoherence(result)
 	if err := s.persistAccountConnectionDiagnostic(result); err != nil {
 		// Persistence is best effort. The probe result remains useful even when
 		// the account row cannot be updated at that moment.
@@ -403,4 +426,129 @@ func redactDiagnosticError(err error, proxyURL string) string {
 		}
 	}
 	return message
+}
+
+// evaluateConnectionCoherence 在探测完成后,对已采集字段做只读一致性分析:对比"被模拟的
+// 客户端身份"与"实际协商到的协议/指纹",把矛盾转成可读发现写入 result。
+//
+// 它不发起任何新请求,也不修改任何出站/转发行为——仅解释既有诊断数据。
+func evaluateConnectionCoherence(result *AccountConnectionDiagnostic) {
+	if result == nil {
+		return
+	}
+
+	findings := make([]ConnectionCoherenceFinding, 0, 4)
+	nodeLikeProfile := classifyProfileClientType(result.TLSProfileName) == profileClientNode
+
+	// 1) 未启用 TLS 指纹:出站 ClientHello 使用 Go 运行时默认特征(非模拟客户端)。
+	if !result.TLSFingerprintEnabled {
+		findings = append(findings, ConnectionCoherenceFinding{
+			Code:       "tls_fingerprint_disabled",
+			Severity:   coherenceSeverityInfo,
+			Message:    "未启用 TLS 指纹,出站 TLS ClientHello 使用 Go 运行时默认特征(JA3/JA4 非模拟客户端)。",
+			Suggestion: "如需模拟 Claude Code / Node 客户端的握手特征,可为该账号绑定 TLS Profile 后再次诊断。",
+		})
+	}
+
+	// 2) OpenAI/Codex 账号绑定 Node 指纹 —— 运行时错配。真实 Codex CLI 是 Rust 客户端。
+	if result.Platform == PlatformOpenAI && result.TLSFingerprintEnabled && nodeLikeProfile {
+		findings = append(findings, ConnectionCoherenceFinding{
+			Code:       "codex_runtime_mismatch",
+			Severity:   coherenceSeverityWarning,
+			Message:    "账号平台为 OpenAI/Codex,但绑定的 TLS Profile 面向 Node.js。真实 Codex CLI 是 Rust 客户端(codex_cli_rs, reqwest/hyper),其 JA3/JA4 与 Node 不同。",
+			Suggestion: "OpenAI 原生转发默认不套 utls 且走内置 HTTP/2 模式;为 Codex 账号套 Node 指纹通常增加不一致而非减少。除非确知转发路径会用到该 Profile,否则不建议启用。",
+		})
+	}
+
+	// 3) 模拟 Node/Claude Code 却协商到 HTTP/1.1 —— 协议维度不一致(当前最主要的缺口)。
+	if result.TLSFingerprintEnabled && nodeLikeProfile && result.Success {
+		switch diagnosticNegotiatedHTTPMajor(result) {
+		case 1:
+			findings = append(findings, ConnectionCoherenceFinding{
+				Code:       "protocol_h1_vs_node_client",
+				Severity:   coherenceSeverityWarning,
+				Message:    "TLS 指纹模拟 Node.js / Claude Code(真实客户端使用 HTTP/2),但本次连接协商为 HTTP/1.1,协议维度与被模拟客户端不一致。",
+				Suggestion: "指纹 transport 当前未启用 HTTP/2(种子 Profile 的 ALPN 为 http/1.1,且 fingerprint transport 关闭了 ForceAttemptHTTP2)。要做到协议一致需推进 H2 方案。",
+			})
+		case 2:
+			findings = append(findings, ConnectionCoherenceFinding{
+				Code:     "protocol_h2_ok",
+				Severity: coherenceSeverityInfo,
+				Message:  "TLS 指纹模拟 Node / Claude Code,且本次连接协商为 HTTP/2,协议维度一致。",
+			})
+		}
+	}
+
+	// 4) OpenAI 账号:本诊断经 DoWithTLS 探测,与原生转发(Do + 内置 H2 模式)不是同一条路径。
+	if result.Platform == PlatformOpenAI {
+		findings = append(findings, ConnectionCoherenceFinding{
+			Code:     "openai_probe_path_note",
+			Severity: coherenceSeverityInfo,
+			Message:  "本诊断经由 TLS 指纹路径探测;OpenAI 原生转发实际走非指纹路径(内置 HTTP/2 模式与 h1 回退),此处协商到的协议不代表原生转发的真实协议。",
+		})
+	}
+
+	result.CoherenceFindings = findings
+	result.CoherenceStatus = summarizeCoherenceStatus(findings, result.Success)
+}
+
+// summarizeCoherenceStatus 汇总总体状态:任一 warning 即 warning;否则若已探测或产出发现即 coherent;都无则 not_checked。
+func summarizeCoherenceStatus(findings []ConnectionCoherenceFinding, probed bool) string {
+	for _, finding := range findings {
+		if finding.Severity == coherenceSeverityWarning {
+			return coherenceStatusWarning
+		}
+	}
+	if probed || len(findings) > 0 {
+		return coherenceStatusCoherent
+	}
+	return coherenceStatusNotChecked
+}
+
+type profileClientType int
+
+const (
+	profileClientUnknown profileClientType = iota
+	profileClientNode
+	profileClientBrowser
+)
+
+// classifyProfileClientType 依据 Profile 名称粗分客户端族,判定口径与
+// model.TLSFingerprintProfile.BuildMetadata 保持一致(claude/codex/node 视为 Node 族)。
+func classifyProfileClientType(name string) profileClientType {
+	text := strings.ToLower(strings.TrimSpace(name))
+	if text == "" {
+		return profileClientUnknown
+	}
+	switch {
+	case strings.Contains(text, "claude"),
+		strings.Contains(text, "codex"),
+		strings.Contains(text, "node"):
+		return profileClientNode
+	case strings.Contains(text, "chrome"),
+		strings.Contains(text, "firefox"),
+		strings.Contains(text, "safari"),
+		strings.Contains(text, "browser"):
+		return profileClientBrowser
+	}
+	return profileClientUnknown
+}
+
+// diagnosticNegotiatedHTTPMajor 返回本次连接实际使用的 HTTP 主版本(1 或 2);无法判定时返回 0。
+// 优先看响应 Proto,回退到协商的 ALPN。
+func diagnosticNegotiatedHTTPMajor(result *AccountConnectionDiagnostic) int {
+	proto := strings.ToLower(strings.TrimSpace(result.HTTPProtocol))
+	switch {
+	case strings.HasPrefix(proto, "http/2"):
+		return 2
+	case strings.HasPrefix(proto, "http/1"):
+		return 1
+	}
+	switch strings.ToLower(strings.TrimSpace(result.ALPN)) {
+	case "h2":
+		return 2
+	case "http/1.1", "http/1.0":
+		return 1
+	}
+	return 0
 }
