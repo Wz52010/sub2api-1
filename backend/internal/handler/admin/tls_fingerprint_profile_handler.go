@@ -33,6 +33,14 @@ type CreateTLSFingerprintProfileRequest struct {
 	KeyShareGroups      []uint16 `json:"key_share_groups"`
 	PSKModes            []uint16 `json:"psk_modes"`
 	Extensions          []uint16 `json:"extensions"`
+	// 档2 H2 帧级指纹（可选；用于跟随真实客户端更新/加变体）
+	H2Settings          [][]uint32 `json:"h2_settings"`
+	H2ConnectionFlow    *uint32    `json:"h2_connection_flow"`
+	H2PseudoHeaderOrder []string   `json:"h2_pseudo_header_order"`
+	H2HeaderOrder       []string   `json:"h2_header_order"`
+	H2AkamaiExpected    *string    `json:"h2_akamai_expected"`
+	H2Source            *string    `json:"h2_source"`
+	ShuffleExtensions   *bool      `json:"shuffle_extensions"`
 }
 
 // UpdateTLSFingerprintProfileRequest 更新模板请求（部分更新）
@@ -49,6 +57,14 @@ type UpdateTLSFingerprintProfileRequest struct {
 	KeyShareGroups      []uint16 `json:"key_share_groups"`
 	PSKModes            []uint16 `json:"psk_modes"`
 	Extensions          []uint16 `json:"extensions"`
+	// 档2 H2 帧级指纹（部分更新；nil 表示不改动该字段）
+	H2Settings          [][]uint32 `json:"h2_settings"`
+	H2ConnectionFlow    *uint32    `json:"h2_connection_flow"`
+	H2PseudoHeaderOrder []string   `json:"h2_pseudo_header_order"`
+	H2HeaderOrder       []string   `json:"h2_header_order"`
+	H2AkamaiExpected    *string    `json:"h2_akamai_expected"`
+	H2Source            *string    `json:"h2_source"`
+	ShuffleExtensions   *bool      `json:"shuffle_extensions"`
 }
 
 // List 获取所有模板
@@ -105,10 +121,21 @@ func (h *TLSFingerprintProfileHandler) Create(c *gin.Context) {
 		KeyShareGroups:      req.KeyShareGroups,
 		PSKModes:            req.PSKModes,
 		Extensions:          req.Extensions,
+		H2Settings:          req.H2Settings,
+		H2PseudoHeaderOrder: req.H2PseudoHeaderOrder,
+		H2HeaderOrder:       req.H2HeaderOrder,
+		H2AkamaiExpected:    req.H2AkamaiExpected,
+		H2Source:            req.H2Source,
 	}
 
 	if req.EnableGREASE != nil {
 		profile.EnableGREASE = *req.EnableGREASE
+	}
+	if req.H2ConnectionFlow != nil {
+		profile.H2ConnectionFlow = *req.H2ConnectionFlow
+	}
+	if req.ShuffleExtensions != nil {
+		profile.ShuffleExtensions = *req.ShuffleExtensions
 	}
 
 	created, err := h.service.Create(c.Request.Context(), profile)
@@ -164,6 +191,13 @@ func (h *TLSFingerprintProfileHandler) Update(c *gin.Context) {
 		KeyShareGroups:      existing.KeyShareGroups,
 		PSKModes:            existing.PSKModes,
 		Extensions:          existing.Extensions,
+		H2Settings:          existing.H2Settings,
+		H2ConnectionFlow:    existing.H2ConnectionFlow,
+		H2PseudoHeaderOrder: existing.H2PseudoHeaderOrder,
+		H2HeaderOrder:       existing.H2HeaderOrder,
+		H2AkamaiExpected:    existing.H2AkamaiExpected,
+		H2Source:            existing.H2Source,
+		ShuffleExtensions:   existing.ShuffleExtensions,
 	}
 
 	if req.Name != nil {
@@ -201,6 +235,27 @@ func (h *TLSFingerprintProfileHandler) Update(c *gin.Context) {
 	}
 	if req.Extensions != nil {
 		profile.Extensions = req.Extensions
+	}
+	if req.H2Settings != nil {
+		profile.H2Settings = req.H2Settings
+	}
+	if req.H2ConnectionFlow != nil {
+		profile.H2ConnectionFlow = *req.H2ConnectionFlow
+	}
+	if req.H2PseudoHeaderOrder != nil {
+		profile.H2PseudoHeaderOrder = req.H2PseudoHeaderOrder
+	}
+	if req.H2HeaderOrder != nil {
+		profile.H2HeaderOrder = req.H2HeaderOrder
+	}
+	if req.H2AkamaiExpected != nil {
+		profile.H2AkamaiExpected = req.H2AkamaiExpected
+	}
+	if req.H2Source != nil {
+		profile.H2Source = req.H2Source
+	}
+	if req.ShuffleExtensions != nil {
+		profile.ShuffleExtensions = *req.ShuffleExtensions
 	}
 
 	updated, err := h.service.Update(c.Request.Context(), profile)

@@ -82,6 +82,25 @@ func (r *tlsFingerprintProfileRepository) Create(ctx context.Context, p *model.T
 	if len(p.Extensions) > 0 {
 		builder.SetExtensions(p.Extensions)
 	}
+	if len(p.H2Settings) > 0 {
+		builder.SetH2Settings(p.H2Settings)
+	}
+	if p.H2ConnectionFlow != 0 {
+		builder.SetH2ConnectionFlow(p.H2ConnectionFlow)
+	}
+	if len(p.H2PseudoHeaderOrder) > 0 {
+		builder.SetH2PseudoHeaderOrder(p.H2PseudoHeaderOrder)
+	}
+	if len(p.H2HeaderOrder) > 0 {
+		builder.SetH2HeaderOrder(p.H2HeaderOrder)
+	}
+	if p.H2AkamaiExpected != nil {
+		builder.SetNillableH2AkamaiExpected(p.H2AkamaiExpected)
+	}
+	if p.H2Source != nil {
+		builder.SetNillableH2Source(p.H2Source)
+	}
+	builder.SetShuffleExtensions(p.ShuffleExtensions)
 
 	created, err := builder.Save(ctx)
 	if err != nil {
@@ -147,6 +166,33 @@ func (r *tlsFingerprintProfileRepository) Update(ctx context.Context, p *model.T
 	} else {
 		builder.ClearExtensions()
 	}
+	if len(p.H2Settings) > 0 {
+		builder.SetH2Settings(p.H2Settings)
+	} else {
+		builder.ClearH2Settings()
+	}
+	builder.SetH2ConnectionFlow(p.H2ConnectionFlow)
+	if len(p.H2PseudoHeaderOrder) > 0 {
+		builder.SetH2PseudoHeaderOrder(p.H2PseudoHeaderOrder)
+	} else {
+		builder.ClearH2PseudoHeaderOrder()
+	}
+	if len(p.H2HeaderOrder) > 0 {
+		builder.SetH2HeaderOrder(p.H2HeaderOrder)
+	} else {
+		builder.ClearH2HeaderOrder()
+	}
+	if p.H2AkamaiExpected != nil {
+		builder.SetNillableH2AkamaiExpected(p.H2AkamaiExpected)
+	} else {
+		builder.ClearH2AkamaiExpected()
+	}
+	if p.H2Source != nil {
+		builder.SetNillableH2Source(p.H2Source)
+	} else {
+		builder.ClearH2Source()
+	}
+	builder.SetShuffleExtensions(p.ShuffleExtensions)
 
 	updated, err := builder.Save(ctx)
 	if err != nil {
@@ -176,6 +222,13 @@ func (r *tlsFingerprintProfileRepository) toModel(e *ent.TLSFingerprintProfile) 
 		KeyShareGroups:      e.KeyShareGroups,
 		PSKModes:            e.PskModes,
 		Extensions:          e.Extensions,
+		H2Settings:          e.H2Settings,
+		H2ConnectionFlow:    e.H2ConnectionFlow,
+		H2PseudoHeaderOrder: e.H2PseudoHeaderOrder,
+		H2HeaderOrder:       e.H2HeaderOrder,
+		H2AkamaiExpected:    e.H2AkamaiExpected,
+		H2Source:            e.H2Source,
+		ShuffleExtensions:   e.ShuffleExtensions,
 		CreatedAt:           e.CreatedAt,
 		UpdatedAt:           e.UpdatedAt,
 	}

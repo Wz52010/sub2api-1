@@ -1919,6 +1919,14 @@ func init() {
 	tlsfingerprintprofileDescEnableGrease := tlsfingerprintprofileFields[2].Descriptor()
 	// tlsfingerprintprofile.DefaultEnableGrease holds the default value on creation for the enable_grease field.
 	tlsfingerprintprofile.DefaultEnableGrease = tlsfingerprintprofileDescEnableGrease.Default.(bool)
+	// tlsfingerprintprofileDescH2ConnectionFlow is the schema descriptor for h2_connection_flow field.
+	tlsfingerprintprofileDescH2ConnectionFlow := tlsfingerprintprofileFields[13].Descriptor()
+	// tlsfingerprintprofile.DefaultH2ConnectionFlow holds the default value on creation for the h2_connection_flow field.
+	tlsfingerprintprofile.DefaultH2ConnectionFlow = tlsfingerprintprofileDescH2ConnectionFlow.Default.(uint32)
+	// tlsfingerprintprofileDescShuffleExtensions is the schema descriptor for shuffle_extensions field.
+	tlsfingerprintprofileDescShuffleExtensions := tlsfingerprintprofileFields[18].Descriptor()
+	// tlsfingerprintprofile.DefaultShuffleExtensions holds the default value on creation for the shuffle_extensions field.
+	tlsfingerprintprofile.DefaultShuffleExtensions = tlsfingerprintprofileDescShuffleExtensions.Default.(bool)
 	usagecleanuptaskMixin := schema.UsageCleanupTask{}.Mixin()
 	usagecleanuptaskMixinFields0 := usagecleanuptaskMixin[0].Fields()
 	_ = usagecleanuptaskMixinFields0

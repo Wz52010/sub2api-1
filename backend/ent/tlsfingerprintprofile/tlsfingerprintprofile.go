@@ -41,6 +41,20 @@ const (
 	FieldPskModes = "psk_modes"
 	// FieldExtensions holds the string denoting the extensions field in the database.
 	FieldExtensions = "extensions"
+	// FieldH2Settings holds the string denoting the h2_settings field in the database.
+	FieldH2Settings = "h2_settings"
+	// FieldH2ConnectionFlow holds the string denoting the h2_connection_flow field in the database.
+	FieldH2ConnectionFlow = "h2_connection_flow"
+	// FieldH2PseudoHeaderOrder holds the string denoting the h2_pseudo_header_order field in the database.
+	FieldH2PseudoHeaderOrder = "h2_pseudo_header_order"
+	// FieldH2HeaderOrder holds the string denoting the h2_header_order field in the database.
+	FieldH2HeaderOrder = "h2_header_order"
+	// FieldH2AkamaiExpected holds the string denoting the h2_akamai_expected field in the database.
+	FieldH2AkamaiExpected = "h2_akamai_expected"
+	// FieldH2Source holds the string denoting the h2_source field in the database.
+	FieldH2Source = "h2_source"
+	// FieldShuffleExtensions holds the string denoting the shuffle_extensions field in the database.
+	FieldShuffleExtensions = "shuffle_extensions"
 	// Table holds the table name of the tlsfingerprintprofile in the database.
 	Table = "tls_fingerprint_profiles"
 )
@@ -62,6 +76,13 @@ var Columns = []string{
 	FieldKeyShareGroups,
 	FieldPskModes,
 	FieldExtensions,
+	FieldH2Settings,
+	FieldH2ConnectionFlow,
+	FieldH2PseudoHeaderOrder,
+	FieldH2HeaderOrder,
+	FieldH2AkamaiExpected,
+	FieldH2Source,
+	FieldShuffleExtensions,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -85,6 +106,10 @@ var (
 	NameValidator func(string) error
 	// DefaultEnableGrease holds the default value on creation for the "enable_grease" field.
 	DefaultEnableGrease bool
+	// DefaultH2ConnectionFlow holds the default value on creation for the "h2_connection_flow" field.
+	DefaultH2ConnectionFlow uint32
+	// DefaultShuffleExtensions holds the default value on creation for the "shuffle_extensions" field.
+	DefaultShuffleExtensions bool
 )
 
 // OrderOption defines the ordering options for the TLSFingerprintProfile queries.
@@ -118,4 +143,24 @@ func ByDescription(opts ...sql.OrderTermOption) OrderOption {
 // ByEnableGrease orders the results by the enable_grease field.
 func ByEnableGrease(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEnableGrease, opts...).ToFunc()
+}
+
+// ByH2ConnectionFlow orders the results by the h2_connection_flow field.
+func ByH2ConnectionFlow(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldH2ConnectionFlow, opts...).ToFunc()
+}
+
+// ByH2AkamaiExpected orders the results by the h2_akamai_expected field.
+func ByH2AkamaiExpected(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldH2AkamaiExpected, opts...).ToFunc()
+}
+
+// ByH2Source orders the results by the h2_source field.
+func ByH2Source(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldH2Source, opts...).ToFunc()
+}
+
+// ByShuffleExtensions orders the results by the shuffle_extensions field.
+func ByShuffleExtensions(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldShuffleExtensions, opts...).ToFunc()
 }

@@ -45,8 +45,22 @@ type TLSFingerprintProfile struct {
 	// PskModes holds the value of the "psk_modes" field.
 	PskModes []uint16 `json:"psk_modes,omitempty"`
 	// Extensions holds the value of the "extensions" field.
-	Extensions   []uint16 `json:"extensions,omitempty"`
-	selectValues sql.SelectValues
+	Extensions []uint16 `json:"extensions,omitempty"`
+	// H2Settings holds the value of the "h2_settings" field.
+	H2Settings [][]uint32 `json:"h2_settings,omitempty"`
+	// H2ConnectionFlow holds the value of the "h2_connection_flow" field.
+	H2ConnectionFlow uint32 `json:"h2_connection_flow,omitempty"`
+	// H2PseudoHeaderOrder holds the value of the "h2_pseudo_header_order" field.
+	H2PseudoHeaderOrder []string `json:"h2_pseudo_header_order,omitempty"`
+	// H2HeaderOrder holds the value of the "h2_header_order" field.
+	H2HeaderOrder []string `json:"h2_header_order,omitempty"`
+	// H2AkamaiExpected holds the value of the "h2_akamai_expected" field.
+	H2AkamaiExpected *string `json:"h2_akamai_expected,omitempty"`
+	// H2Source holds the value of the "h2_source" field.
+	H2Source *string `json:"h2_source,omitempty"`
+	// ShuffleExtensions holds the value of the "shuffle_extensions" field.
+	ShuffleExtensions bool `json:"shuffle_extensions,omitempty"`
+	selectValues      sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -54,13 +68,13 @@ func (*TLSFingerprintProfile) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case tlsfingerprintprofile.FieldCipherSuites, tlsfingerprintprofile.FieldCurves, tlsfingerprintprofile.FieldPointFormats, tlsfingerprintprofile.FieldSignatureAlgorithms, tlsfingerprintprofile.FieldAlpnProtocols, tlsfingerprintprofile.FieldSupportedVersions, tlsfingerprintprofile.FieldKeyShareGroups, tlsfingerprintprofile.FieldPskModes, tlsfingerprintprofile.FieldExtensions:
+		case tlsfingerprintprofile.FieldCipherSuites, tlsfingerprintprofile.FieldCurves, tlsfingerprintprofile.FieldPointFormats, tlsfingerprintprofile.FieldSignatureAlgorithms, tlsfingerprintprofile.FieldAlpnProtocols, tlsfingerprintprofile.FieldSupportedVersions, tlsfingerprintprofile.FieldKeyShareGroups, tlsfingerprintprofile.FieldPskModes, tlsfingerprintprofile.FieldExtensions, tlsfingerprintprofile.FieldH2Settings, tlsfingerprintprofile.FieldH2PseudoHeaderOrder, tlsfingerprintprofile.FieldH2HeaderOrder:
 			values[i] = new([]byte)
-		case tlsfingerprintprofile.FieldEnableGrease:
+		case tlsfingerprintprofile.FieldEnableGrease, tlsfingerprintprofile.FieldShuffleExtensions:
 			values[i] = new(sql.NullBool)
-		case tlsfingerprintprofile.FieldID:
+		case tlsfingerprintprofile.FieldID, tlsfingerprintprofile.FieldH2ConnectionFlow:
 			values[i] = new(sql.NullInt64)
-		case tlsfingerprintprofile.FieldName, tlsfingerprintprofile.FieldDescription:
+		case tlsfingerprintprofile.FieldName, tlsfingerprintprofile.FieldDescription, tlsfingerprintprofile.FieldH2AkamaiExpected, tlsfingerprintprofile.FieldH2Source:
 			values[i] = new(sql.NullString)
 		case tlsfingerprintprofile.FieldCreatedAt, tlsfingerprintprofile.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -188,6 +202,56 @@ func (_m *TLSFingerprintProfile) assignValues(columns []string, values []any) er
 					return fmt.Errorf("unmarshal field extensions: %w", err)
 				}
 			}
+		case tlsfingerprintprofile.FieldH2Settings:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field h2_settings", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.H2Settings); err != nil {
+					return fmt.Errorf("unmarshal field h2_settings: %w", err)
+				}
+			}
+		case tlsfingerprintprofile.FieldH2ConnectionFlow:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field h2_connection_flow", values[i])
+			} else if value.Valid {
+				_m.H2ConnectionFlow = uint32(value.Int64)
+			}
+		case tlsfingerprintprofile.FieldH2PseudoHeaderOrder:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field h2_pseudo_header_order", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.H2PseudoHeaderOrder); err != nil {
+					return fmt.Errorf("unmarshal field h2_pseudo_header_order: %w", err)
+				}
+			}
+		case tlsfingerprintprofile.FieldH2HeaderOrder:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field h2_header_order", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.H2HeaderOrder); err != nil {
+					return fmt.Errorf("unmarshal field h2_header_order: %w", err)
+				}
+			}
+		case tlsfingerprintprofile.FieldH2AkamaiExpected:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field h2_akamai_expected", values[i])
+			} else if value.Valid {
+				_m.H2AkamaiExpected = new(string)
+				*_m.H2AkamaiExpected = value.String
+			}
+		case tlsfingerprintprofile.FieldH2Source:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field h2_source", values[i])
+			} else if value.Valid {
+				_m.H2Source = new(string)
+				*_m.H2Source = value.String
+			}
+		case tlsfingerprintprofile.FieldShuffleExtensions:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field shuffle_extensions", values[i])
+			} else if value.Valid {
+				_m.ShuffleExtensions = value.Bool
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -267,6 +331,31 @@ func (_m *TLSFingerprintProfile) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("extensions=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Extensions))
+	builder.WriteString(", ")
+	builder.WriteString("h2_settings=")
+	builder.WriteString(fmt.Sprintf("%v", _m.H2Settings))
+	builder.WriteString(", ")
+	builder.WriteString("h2_connection_flow=")
+	builder.WriteString(fmt.Sprintf("%v", _m.H2ConnectionFlow))
+	builder.WriteString(", ")
+	builder.WriteString("h2_pseudo_header_order=")
+	builder.WriteString(fmt.Sprintf("%v", _m.H2PseudoHeaderOrder))
+	builder.WriteString(", ")
+	builder.WriteString("h2_header_order=")
+	builder.WriteString(fmt.Sprintf("%v", _m.H2HeaderOrder))
+	builder.WriteString(", ")
+	if v := _m.H2AkamaiExpected; v != nil {
+		builder.WriteString("h2_akamai_expected=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.H2Source; v != nil {
+		builder.WriteString("h2_source=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	builder.WriteString("shuffle_extensions=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ShuffleExtensions))
 	builder.WriteByte(')')
 	return builder.String()
 }

@@ -138,6 +138,80 @@ func (_c *TLSFingerprintProfileCreate) SetExtensions(v []uint16) *TLSFingerprint
 	return _c
 }
 
+// SetH2Settings sets the "h2_settings" field.
+func (_c *TLSFingerprintProfileCreate) SetH2Settings(v [][]uint32) *TLSFingerprintProfileCreate {
+	_c.mutation.SetH2Settings(v)
+	return _c
+}
+
+// SetH2ConnectionFlow sets the "h2_connection_flow" field.
+func (_c *TLSFingerprintProfileCreate) SetH2ConnectionFlow(v uint32) *TLSFingerprintProfileCreate {
+	_c.mutation.SetH2ConnectionFlow(v)
+	return _c
+}
+
+// SetNillableH2ConnectionFlow sets the "h2_connection_flow" field if the given value is not nil.
+func (_c *TLSFingerprintProfileCreate) SetNillableH2ConnectionFlow(v *uint32) *TLSFingerprintProfileCreate {
+	if v != nil {
+		_c.SetH2ConnectionFlow(*v)
+	}
+	return _c
+}
+
+// SetH2PseudoHeaderOrder sets the "h2_pseudo_header_order" field.
+func (_c *TLSFingerprintProfileCreate) SetH2PseudoHeaderOrder(v []string) *TLSFingerprintProfileCreate {
+	_c.mutation.SetH2PseudoHeaderOrder(v)
+	return _c
+}
+
+// SetH2HeaderOrder sets the "h2_header_order" field.
+func (_c *TLSFingerprintProfileCreate) SetH2HeaderOrder(v []string) *TLSFingerprintProfileCreate {
+	_c.mutation.SetH2HeaderOrder(v)
+	return _c
+}
+
+// SetH2AkamaiExpected sets the "h2_akamai_expected" field.
+func (_c *TLSFingerprintProfileCreate) SetH2AkamaiExpected(v string) *TLSFingerprintProfileCreate {
+	_c.mutation.SetH2AkamaiExpected(v)
+	return _c
+}
+
+// SetNillableH2AkamaiExpected sets the "h2_akamai_expected" field if the given value is not nil.
+func (_c *TLSFingerprintProfileCreate) SetNillableH2AkamaiExpected(v *string) *TLSFingerprintProfileCreate {
+	if v != nil {
+		_c.SetH2AkamaiExpected(*v)
+	}
+	return _c
+}
+
+// SetH2Source sets the "h2_source" field.
+func (_c *TLSFingerprintProfileCreate) SetH2Source(v string) *TLSFingerprintProfileCreate {
+	_c.mutation.SetH2Source(v)
+	return _c
+}
+
+// SetNillableH2Source sets the "h2_source" field if the given value is not nil.
+func (_c *TLSFingerprintProfileCreate) SetNillableH2Source(v *string) *TLSFingerprintProfileCreate {
+	if v != nil {
+		_c.SetH2Source(*v)
+	}
+	return _c
+}
+
+// SetShuffleExtensions sets the "shuffle_extensions" field.
+func (_c *TLSFingerprintProfileCreate) SetShuffleExtensions(v bool) *TLSFingerprintProfileCreate {
+	_c.mutation.SetShuffleExtensions(v)
+	return _c
+}
+
+// SetNillableShuffleExtensions sets the "shuffle_extensions" field if the given value is not nil.
+func (_c *TLSFingerprintProfileCreate) SetNillableShuffleExtensions(v *bool) *TLSFingerprintProfileCreate {
+	if v != nil {
+		_c.SetShuffleExtensions(*v)
+	}
+	return _c
+}
+
 // Mutation returns the TLSFingerprintProfileMutation object of the builder.
 func (_c *TLSFingerprintProfileCreate) Mutation() *TLSFingerprintProfileMutation {
 	return _c.mutation
@@ -184,6 +258,14 @@ func (_c *TLSFingerprintProfileCreate) defaults() {
 	if _, ok := _c.mutation.EnableGrease(); !ok {
 		v := tlsfingerprintprofile.DefaultEnableGrease
 		_c.mutation.SetEnableGrease(v)
+	}
+	if _, ok := _c.mutation.H2ConnectionFlow(); !ok {
+		v := tlsfingerprintprofile.DefaultH2ConnectionFlow
+		_c.mutation.SetH2ConnectionFlow(v)
+	}
+	if _, ok := _c.mutation.ShuffleExtensions(); !ok {
+		v := tlsfingerprintprofile.DefaultShuffleExtensions
+		_c.mutation.SetShuffleExtensions(v)
 	}
 }
 
@@ -288,6 +370,34 @@ func (_c *TLSFingerprintProfileCreate) createSpec() (*TLSFingerprintProfile, *sq
 	if value, ok := _c.mutation.Extensions(); ok {
 		_spec.SetField(tlsfingerprintprofile.FieldExtensions, field.TypeJSON, value)
 		_node.Extensions = value
+	}
+	if value, ok := _c.mutation.H2Settings(); ok {
+		_spec.SetField(tlsfingerprintprofile.FieldH2Settings, field.TypeJSON, value)
+		_node.H2Settings = value
+	}
+	if value, ok := _c.mutation.H2ConnectionFlow(); ok {
+		_spec.SetField(tlsfingerprintprofile.FieldH2ConnectionFlow, field.TypeUint32, value)
+		_node.H2ConnectionFlow = value
+	}
+	if value, ok := _c.mutation.H2PseudoHeaderOrder(); ok {
+		_spec.SetField(tlsfingerprintprofile.FieldH2PseudoHeaderOrder, field.TypeJSON, value)
+		_node.H2PseudoHeaderOrder = value
+	}
+	if value, ok := _c.mutation.H2HeaderOrder(); ok {
+		_spec.SetField(tlsfingerprintprofile.FieldH2HeaderOrder, field.TypeJSON, value)
+		_node.H2HeaderOrder = value
+	}
+	if value, ok := _c.mutation.H2AkamaiExpected(); ok {
+		_spec.SetField(tlsfingerprintprofile.FieldH2AkamaiExpected, field.TypeString, value)
+		_node.H2AkamaiExpected = &value
+	}
+	if value, ok := _c.mutation.H2Source(); ok {
+		_spec.SetField(tlsfingerprintprofile.FieldH2Source, field.TypeString, value)
+		_node.H2Source = &value
+	}
+	if value, ok := _c.mutation.ShuffleExtensions(); ok {
+		_spec.SetField(tlsfingerprintprofile.FieldShuffleExtensions, field.TypeBool, value)
+		_node.ShuffleExtensions = value
 	}
 	return _node, _spec
 }
@@ -554,6 +664,138 @@ func (u *TLSFingerprintProfileUpsert) UpdateExtensions() *TLSFingerprintProfileU
 // ClearExtensions clears the value of the "extensions" field.
 func (u *TLSFingerprintProfileUpsert) ClearExtensions() *TLSFingerprintProfileUpsert {
 	u.SetNull(tlsfingerprintprofile.FieldExtensions)
+	return u
+}
+
+// SetH2Settings sets the "h2_settings" field.
+func (u *TLSFingerprintProfileUpsert) SetH2Settings(v [][]uint32) *TLSFingerprintProfileUpsert {
+	u.Set(tlsfingerprintprofile.FieldH2Settings, v)
+	return u
+}
+
+// UpdateH2Settings sets the "h2_settings" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsert) UpdateH2Settings() *TLSFingerprintProfileUpsert {
+	u.SetExcluded(tlsfingerprintprofile.FieldH2Settings)
+	return u
+}
+
+// ClearH2Settings clears the value of the "h2_settings" field.
+func (u *TLSFingerprintProfileUpsert) ClearH2Settings() *TLSFingerprintProfileUpsert {
+	u.SetNull(tlsfingerprintprofile.FieldH2Settings)
+	return u
+}
+
+// SetH2ConnectionFlow sets the "h2_connection_flow" field.
+func (u *TLSFingerprintProfileUpsert) SetH2ConnectionFlow(v uint32) *TLSFingerprintProfileUpsert {
+	u.Set(tlsfingerprintprofile.FieldH2ConnectionFlow, v)
+	return u
+}
+
+// UpdateH2ConnectionFlow sets the "h2_connection_flow" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsert) UpdateH2ConnectionFlow() *TLSFingerprintProfileUpsert {
+	u.SetExcluded(tlsfingerprintprofile.FieldH2ConnectionFlow)
+	return u
+}
+
+// AddH2ConnectionFlow adds v to the "h2_connection_flow" field.
+func (u *TLSFingerprintProfileUpsert) AddH2ConnectionFlow(v uint32) *TLSFingerprintProfileUpsert {
+	u.Add(tlsfingerprintprofile.FieldH2ConnectionFlow, v)
+	return u
+}
+
+// ClearH2ConnectionFlow clears the value of the "h2_connection_flow" field.
+func (u *TLSFingerprintProfileUpsert) ClearH2ConnectionFlow() *TLSFingerprintProfileUpsert {
+	u.SetNull(tlsfingerprintprofile.FieldH2ConnectionFlow)
+	return u
+}
+
+// SetH2PseudoHeaderOrder sets the "h2_pseudo_header_order" field.
+func (u *TLSFingerprintProfileUpsert) SetH2PseudoHeaderOrder(v []string) *TLSFingerprintProfileUpsert {
+	u.Set(tlsfingerprintprofile.FieldH2PseudoHeaderOrder, v)
+	return u
+}
+
+// UpdateH2PseudoHeaderOrder sets the "h2_pseudo_header_order" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsert) UpdateH2PseudoHeaderOrder() *TLSFingerprintProfileUpsert {
+	u.SetExcluded(tlsfingerprintprofile.FieldH2PseudoHeaderOrder)
+	return u
+}
+
+// ClearH2PseudoHeaderOrder clears the value of the "h2_pseudo_header_order" field.
+func (u *TLSFingerprintProfileUpsert) ClearH2PseudoHeaderOrder() *TLSFingerprintProfileUpsert {
+	u.SetNull(tlsfingerprintprofile.FieldH2PseudoHeaderOrder)
+	return u
+}
+
+// SetH2HeaderOrder sets the "h2_header_order" field.
+func (u *TLSFingerprintProfileUpsert) SetH2HeaderOrder(v []string) *TLSFingerprintProfileUpsert {
+	u.Set(tlsfingerprintprofile.FieldH2HeaderOrder, v)
+	return u
+}
+
+// UpdateH2HeaderOrder sets the "h2_header_order" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsert) UpdateH2HeaderOrder() *TLSFingerprintProfileUpsert {
+	u.SetExcluded(tlsfingerprintprofile.FieldH2HeaderOrder)
+	return u
+}
+
+// ClearH2HeaderOrder clears the value of the "h2_header_order" field.
+func (u *TLSFingerprintProfileUpsert) ClearH2HeaderOrder() *TLSFingerprintProfileUpsert {
+	u.SetNull(tlsfingerprintprofile.FieldH2HeaderOrder)
+	return u
+}
+
+// SetH2AkamaiExpected sets the "h2_akamai_expected" field.
+func (u *TLSFingerprintProfileUpsert) SetH2AkamaiExpected(v string) *TLSFingerprintProfileUpsert {
+	u.Set(tlsfingerprintprofile.FieldH2AkamaiExpected, v)
+	return u
+}
+
+// UpdateH2AkamaiExpected sets the "h2_akamai_expected" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsert) UpdateH2AkamaiExpected() *TLSFingerprintProfileUpsert {
+	u.SetExcluded(tlsfingerprintprofile.FieldH2AkamaiExpected)
+	return u
+}
+
+// ClearH2AkamaiExpected clears the value of the "h2_akamai_expected" field.
+func (u *TLSFingerprintProfileUpsert) ClearH2AkamaiExpected() *TLSFingerprintProfileUpsert {
+	u.SetNull(tlsfingerprintprofile.FieldH2AkamaiExpected)
+	return u
+}
+
+// SetH2Source sets the "h2_source" field.
+func (u *TLSFingerprintProfileUpsert) SetH2Source(v string) *TLSFingerprintProfileUpsert {
+	u.Set(tlsfingerprintprofile.FieldH2Source, v)
+	return u
+}
+
+// UpdateH2Source sets the "h2_source" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsert) UpdateH2Source() *TLSFingerprintProfileUpsert {
+	u.SetExcluded(tlsfingerprintprofile.FieldH2Source)
+	return u
+}
+
+// ClearH2Source clears the value of the "h2_source" field.
+func (u *TLSFingerprintProfileUpsert) ClearH2Source() *TLSFingerprintProfileUpsert {
+	u.SetNull(tlsfingerprintprofile.FieldH2Source)
+	return u
+}
+
+// SetShuffleExtensions sets the "shuffle_extensions" field.
+func (u *TLSFingerprintProfileUpsert) SetShuffleExtensions(v bool) *TLSFingerprintProfileUpsert {
+	u.Set(tlsfingerprintprofile.FieldShuffleExtensions, v)
+	return u
+}
+
+// UpdateShuffleExtensions sets the "shuffle_extensions" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsert) UpdateShuffleExtensions() *TLSFingerprintProfileUpsert {
+	u.SetExcluded(tlsfingerprintprofile.FieldShuffleExtensions)
+	return u
+}
+
+// ClearShuffleExtensions clears the value of the "shuffle_extensions" field.
+func (u *TLSFingerprintProfileUpsert) ClearShuffleExtensions() *TLSFingerprintProfileUpsert {
+	u.SetNull(tlsfingerprintprofile.FieldShuffleExtensions)
 	return u
 }
 
@@ -851,6 +1093,160 @@ func (u *TLSFingerprintProfileUpsertOne) UpdateExtensions() *TLSFingerprintProfi
 func (u *TLSFingerprintProfileUpsertOne) ClearExtensions() *TLSFingerprintProfileUpsertOne {
 	return u.Update(func(s *TLSFingerprintProfileUpsert) {
 		s.ClearExtensions()
+	})
+}
+
+// SetH2Settings sets the "h2_settings" field.
+func (u *TLSFingerprintProfileUpsertOne) SetH2Settings(v [][]uint32) *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.SetH2Settings(v)
+	})
+}
+
+// UpdateH2Settings sets the "h2_settings" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsertOne) UpdateH2Settings() *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.UpdateH2Settings()
+	})
+}
+
+// ClearH2Settings clears the value of the "h2_settings" field.
+func (u *TLSFingerprintProfileUpsertOne) ClearH2Settings() *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.ClearH2Settings()
+	})
+}
+
+// SetH2ConnectionFlow sets the "h2_connection_flow" field.
+func (u *TLSFingerprintProfileUpsertOne) SetH2ConnectionFlow(v uint32) *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.SetH2ConnectionFlow(v)
+	})
+}
+
+// AddH2ConnectionFlow adds v to the "h2_connection_flow" field.
+func (u *TLSFingerprintProfileUpsertOne) AddH2ConnectionFlow(v uint32) *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.AddH2ConnectionFlow(v)
+	})
+}
+
+// UpdateH2ConnectionFlow sets the "h2_connection_flow" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsertOne) UpdateH2ConnectionFlow() *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.UpdateH2ConnectionFlow()
+	})
+}
+
+// ClearH2ConnectionFlow clears the value of the "h2_connection_flow" field.
+func (u *TLSFingerprintProfileUpsertOne) ClearH2ConnectionFlow() *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.ClearH2ConnectionFlow()
+	})
+}
+
+// SetH2PseudoHeaderOrder sets the "h2_pseudo_header_order" field.
+func (u *TLSFingerprintProfileUpsertOne) SetH2PseudoHeaderOrder(v []string) *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.SetH2PseudoHeaderOrder(v)
+	})
+}
+
+// UpdateH2PseudoHeaderOrder sets the "h2_pseudo_header_order" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsertOne) UpdateH2PseudoHeaderOrder() *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.UpdateH2PseudoHeaderOrder()
+	})
+}
+
+// ClearH2PseudoHeaderOrder clears the value of the "h2_pseudo_header_order" field.
+func (u *TLSFingerprintProfileUpsertOne) ClearH2PseudoHeaderOrder() *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.ClearH2PseudoHeaderOrder()
+	})
+}
+
+// SetH2HeaderOrder sets the "h2_header_order" field.
+func (u *TLSFingerprintProfileUpsertOne) SetH2HeaderOrder(v []string) *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.SetH2HeaderOrder(v)
+	})
+}
+
+// UpdateH2HeaderOrder sets the "h2_header_order" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsertOne) UpdateH2HeaderOrder() *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.UpdateH2HeaderOrder()
+	})
+}
+
+// ClearH2HeaderOrder clears the value of the "h2_header_order" field.
+func (u *TLSFingerprintProfileUpsertOne) ClearH2HeaderOrder() *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.ClearH2HeaderOrder()
+	})
+}
+
+// SetH2AkamaiExpected sets the "h2_akamai_expected" field.
+func (u *TLSFingerprintProfileUpsertOne) SetH2AkamaiExpected(v string) *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.SetH2AkamaiExpected(v)
+	})
+}
+
+// UpdateH2AkamaiExpected sets the "h2_akamai_expected" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsertOne) UpdateH2AkamaiExpected() *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.UpdateH2AkamaiExpected()
+	})
+}
+
+// ClearH2AkamaiExpected clears the value of the "h2_akamai_expected" field.
+func (u *TLSFingerprintProfileUpsertOne) ClearH2AkamaiExpected() *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.ClearH2AkamaiExpected()
+	})
+}
+
+// SetH2Source sets the "h2_source" field.
+func (u *TLSFingerprintProfileUpsertOne) SetH2Source(v string) *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.SetH2Source(v)
+	})
+}
+
+// UpdateH2Source sets the "h2_source" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsertOne) UpdateH2Source() *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.UpdateH2Source()
+	})
+}
+
+// ClearH2Source clears the value of the "h2_source" field.
+func (u *TLSFingerprintProfileUpsertOne) ClearH2Source() *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.ClearH2Source()
+	})
+}
+
+// SetShuffleExtensions sets the "shuffle_extensions" field.
+func (u *TLSFingerprintProfileUpsertOne) SetShuffleExtensions(v bool) *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.SetShuffleExtensions(v)
+	})
+}
+
+// UpdateShuffleExtensions sets the "shuffle_extensions" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsertOne) UpdateShuffleExtensions() *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.UpdateShuffleExtensions()
+	})
+}
+
+// ClearShuffleExtensions clears the value of the "shuffle_extensions" field.
+func (u *TLSFingerprintProfileUpsertOne) ClearShuffleExtensions() *TLSFingerprintProfileUpsertOne {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.ClearShuffleExtensions()
 	})
 }
 
@@ -1314,6 +1710,160 @@ func (u *TLSFingerprintProfileUpsertBulk) UpdateExtensions() *TLSFingerprintProf
 func (u *TLSFingerprintProfileUpsertBulk) ClearExtensions() *TLSFingerprintProfileUpsertBulk {
 	return u.Update(func(s *TLSFingerprintProfileUpsert) {
 		s.ClearExtensions()
+	})
+}
+
+// SetH2Settings sets the "h2_settings" field.
+func (u *TLSFingerprintProfileUpsertBulk) SetH2Settings(v [][]uint32) *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.SetH2Settings(v)
+	})
+}
+
+// UpdateH2Settings sets the "h2_settings" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsertBulk) UpdateH2Settings() *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.UpdateH2Settings()
+	})
+}
+
+// ClearH2Settings clears the value of the "h2_settings" field.
+func (u *TLSFingerprintProfileUpsertBulk) ClearH2Settings() *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.ClearH2Settings()
+	})
+}
+
+// SetH2ConnectionFlow sets the "h2_connection_flow" field.
+func (u *TLSFingerprintProfileUpsertBulk) SetH2ConnectionFlow(v uint32) *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.SetH2ConnectionFlow(v)
+	})
+}
+
+// AddH2ConnectionFlow adds v to the "h2_connection_flow" field.
+func (u *TLSFingerprintProfileUpsertBulk) AddH2ConnectionFlow(v uint32) *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.AddH2ConnectionFlow(v)
+	})
+}
+
+// UpdateH2ConnectionFlow sets the "h2_connection_flow" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsertBulk) UpdateH2ConnectionFlow() *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.UpdateH2ConnectionFlow()
+	})
+}
+
+// ClearH2ConnectionFlow clears the value of the "h2_connection_flow" field.
+func (u *TLSFingerprintProfileUpsertBulk) ClearH2ConnectionFlow() *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.ClearH2ConnectionFlow()
+	})
+}
+
+// SetH2PseudoHeaderOrder sets the "h2_pseudo_header_order" field.
+func (u *TLSFingerprintProfileUpsertBulk) SetH2PseudoHeaderOrder(v []string) *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.SetH2PseudoHeaderOrder(v)
+	})
+}
+
+// UpdateH2PseudoHeaderOrder sets the "h2_pseudo_header_order" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsertBulk) UpdateH2PseudoHeaderOrder() *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.UpdateH2PseudoHeaderOrder()
+	})
+}
+
+// ClearH2PseudoHeaderOrder clears the value of the "h2_pseudo_header_order" field.
+func (u *TLSFingerprintProfileUpsertBulk) ClearH2PseudoHeaderOrder() *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.ClearH2PseudoHeaderOrder()
+	})
+}
+
+// SetH2HeaderOrder sets the "h2_header_order" field.
+func (u *TLSFingerprintProfileUpsertBulk) SetH2HeaderOrder(v []string) *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.SetH2HeaderOrder(v)
+	})
+}
+
+// UpdateH2HeaderOrder sets the "h2_header_order" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsertBulk) UpdateH2HeaderOrder() *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.UpdateH2HeaderOrder()
+	})
+}
+
+// ClearH2HeaderOrder clears the value of the "h2_header_order" field.
+func (u *TLSFingerprintProfileUpsertBulk) ClearH2HeaderOrder() *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.ClearH2HeaderOrder()
+	})
+}
+
+// SetH2AkamaiExpected sets the "h2_akamai_expected" field.
+func (u *TLSFingerprintProfileUpsertBulk) SetH2AkamaiExpected(v string) *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.SetH2AkamaiExpected(v)
+	})
+}
+
+// UpdateH2AkamaiExpected sets the "h2_akamai_expected" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsertBulk) UpdateH2AkamaiExpected() *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.UpdateH2AkamaiExpected()
+	})
+}
+
+// ClearH2AkamaiExpected clears the value of the "h2_akamai_expected" field.
+func (u *TLSFingerprintProfileUpsertBulk) ClearH2AkamaiExpected() *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.ClearH2AkamaiExpected()
+	})
+}
+
+// SetH2Source sets the "h2_source" field.
+func (u *TLSFingerprintProfileUpsertBulk) SetH2Source(v string) *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.SetH2Source(v)
+	})
+}
+
+// UpdateH2Source sets the "h2_source" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsertBulk) UpdateH2Source() *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.UpdateH2Source()
+	})
+}
+
+// ClearH2Source clears the value of the "h2_source" field.
+func (u *TLSFingerprintProfileUpsertBulk) ClearH2Source() *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.ClearH2Source()
+	})
+}
+
+// SetShuffleExtensions sets the "shuffle_extensions" field.
+func (u *TLSFingerprintProfileUpsertBulk) SetShuffleExtensions(v bool) *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.SetShuffleExtensions(v)
+	})
+}
+
+// UpdateShuffleExtensions sets the "shuffle_extensions" field to the value that was provided on create.
+func (u *TLSFingerprintProfileUpsertBulk) UpdateShuffleExtensions() *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.UpdateShuffleExtensions()
+	})
+}
+
+// ClearShuffleExtensions clears the value of the "shuffle_extensions" field.
+func (u *TLSFingerprintProfileUpsertBulk) ClearShuffleExtensions() *TLSFingerprintProfileUpsertBulk {
+	return u.Update(func(s *TLSFingerprintProfileUpsert) {
+		s.ClearShuffleExtensions()
 	})
 }
 

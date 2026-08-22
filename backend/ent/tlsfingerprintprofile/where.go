@@ -79,6 +79,26 @@ func EnableGrease(v bool) predicate.TLSFingerprintProfile {
 	return predicate.TLSFingerprintProfile(sql.FieldEQ(FieldEnableGrease, v))
 }
 
+// H2ConnectionFlow applies equality check predicate on the "h2_connection_flow" field. It's identical to H2ConnectionFlowEQ.
+func H2ConnectionFlow(v uint32) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldEQ(FieldH2ConnectionFlow, v))
+}
+
+// H2AkamaiExpected applies equality check predicate on the "h2_akamai_expected" field. It's identical to H2AkamaiExpectedEQ.
+func H2AkamaiExpected(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldEQ(FieldH2AkamaiExpected, v))
+}
+
+// H2Source applies equality check predicate on the "h2_source" field. It's identical to H2SourceEQ.
+func H2Source(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldEQ(FieldH2Source, v))
+}
+
+// ShuffleExtensions applies equality check predicate on the "shuffle_extensions" field. It's identical to ShuffleExtensionsEQ.
+func ShuffleExtensions(v bool) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldEQ(FieldShuffleExtensions, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.TLSFingerprintProfile {
 	return predicate.TLSFingerprintProfile(sql.FieldEQ(FieldCreatedAt, v))
@@ -397,6 +417,256 @@ func ExtensionsIsNil() predicate.TLSFingerprintProfile {
 // ExtensionsNotNil applies the NotNil predicate on the "extensions" field.
 func ExtensionsNotNil() predicate.TLSFingerprintProfile {
 	return predicate.TLSFingerprintProfile(sql.FieldNotNull(FieldExtensions))
+}
+
+// H2SettingsIsNil applies the IsNil predicate on the "h2_settings" field.
+func H2SettingsIsNil() predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldIsNull(FieldH2Settings))
+}
+
+// H2SettingsNotNil applies the NotNil predicate on the "h2_settings" field.
+func H2SettingsNotNil() predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldNotNull(FieldH2Settings))
+}
+
+// H2ConnectionFlowEQ applies the EQ predicate on the "h2_connection_flow" field.
+func H2ConnectionFlowEQ(v uint32) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldEQ(FieldH2ConnectionFlow, v))
+}
+
+// H2ConnectionFlowNEQ applies the NEQ predicate on the "h2_connection_flow" field.
+func H2ConnectionFlowNEQ(v uint32) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldNEQ(FieldH2ConnectionFlow, v))
+}
+
+// H2ConnectionFlowIn applies the In predicate on the "h2_connection_flow" field.
+func H2ConnectionFlowIn(vs ...uint32) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldIn(FieldH2ConnectionFlow, vs...))
+}
+
+// H2ConnectionFlowNotIn applies the NotIn predicate on the "h2_connection_flow" field.
+func H2ConnectionFlowNotIn(vs ...uint32) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldNotIn(FieldH2ConnectionFlow, vs...))
+}
+
+// H2ConnectionFlowGT applies the GT predicate on the "h2_connection_flow" field.
+func H2ConnectionFlowGT(v uint32) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldGT(FieldH2ConnectionFlow, v))
+}
+
+// H2ConnectionFlowGTE applies the GTE predicate on the "h2_connection_flow" field.
+func H2ConnectionFlowGTE(v uint32) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldGTE(FieldH2ConnectionFlow, v))
+}
+
+// H2ConnectionFlowLT applies the LT predicate on the "h2_connection_flow" field.
+func H2ConnectionFlowLT(v uint32) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldLT(FieldH2ConnectionFlow, v))
+}
+
+// H2ConnectionFlowLTE applies the LTE predicate on the "h2_connection_flow" field.
+func H2ConnectionFlowLTE(v uint32) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldLTE(FieldH2ConnectionFlow, v))
+}
+
+// H2ConnectionFlowIsNil applies the IsNil predicate on the "h2_connection_flow" field.
+func H2ConnectionFlowIsNil() predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldIsNull(FieldH2ConnectionFlow))
+}
+
+// H2ConnectionFlowNotNil applies the NotNil predicate on the "h2_connection_flow" field.
+func H2ConnectionFlowNotNil() predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldNotNull(FieldH2ConnectionFlow))
+}
+
+// H2PseudoHeaderOrderIsNil applies the IsNil predicate on the "h2_pseudo_header_order" field.
+func H2PseudoHeaderOrderIsNil() predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldIsNull(FieldH2PseudoHeaderOrder))
+}
+
+// H2PseudoHeaderOrderNotNil applies the NotNil predicate on the "h2_pseudo_header_order" field.
+func H2PseudoHeaderOrderNotNil() predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldNotNull(FieldH2PseudoHeaderOrder))
+}
+
+// H2HeaderOrderIsNil applies the IsNil predicate on the "h2_header_order" field.
+func H2HeaderOrderIsNil() predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldIsNull(FieldH2HeaderOrder))
+}
+
+// H2HeaderOrderNotNil applies the NotNil predicate on the "h2_header_order" field.
+func H2HeaderOrderNotNil() predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldNotNull(FieldH2HeaderOrder))
+}
+
+// H2AkamaiExpectedEQ applies the EQ predicate on the "h2_akamai_expected" field.
+func H2AkamaiExpectedEQ(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldEQ(FieldH2AkamaiExpected, v))
+}
+
+// H2AkamaiExpectedNEQ applies the NEQ predicate on the "h2_akamai_expected" field.
+func H2AkamaiExpectedNEQ(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldNEQ(FieldH2AkamaiExpected, v))
+}
+
+// H2AkamaiExpectedIn applies the In predicate on the "h2_akamai_expected" field.
+func H2AkamaiExpectedIn(vs ...string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldIn(FieldH2AkamaiExpected, vs...))
+}
+
+// H2AkamaiExpectedNotIn applies the NotIn predicate on the "h2_akamai_expected" field.
+func H2AkamaiExpectedNotIn(vs ...string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldNotIn(FieldH2AkamaiExpected, vs...))
+}
+
+// H2AkamaiExpectedGT applies the GT predicate on the "h2_akamai_expected" field.
+func H2AkamaiExpectedGT(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldGT(FieldH2AkamaiExpected, v))
+}
+
+// H2AkamaiExpectedGTE applies the GTE predicate on the "h2_akamai_expected" field.
+func H2AkamaiExpectedGTE(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldGTE(FieldH2AkamaiExpected, v))
+}
+
+// H2AkamaiExpectedLT applies the LT predicate on the "h2_akamai_expected" field.
+func H2AkamaiExpectedLT(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldLT(FieldH2AkamaiExpected, v))
+}
+
+// H2AkamaiExpectedLTE applies the LTE predicate on the "h2_akamai_expected" field.
+func H2AkamaiExpectedLTE(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldLTE(FieldH2AkamaiExpected, v))
+}
+
+// H2AkamaiExpectedContains applies the Contains predicate on the "h2_akamai_expected" field.
+func H2AkamaiExpectedContains(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldContains(FieldH2AkamaiExpected, v))
+}
+
+// H2AkamaiExpectedHasPrefix applies the HasPrefix predicate on the "h2_akamai_expected" field.
+func H2AkamaiExpectedHasPrefix(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldHasPrefix(FieldH2AkamaiExpected, v))
+}
+
+// H2AkamaiExpectedHasSuffix applies the HasSuffix predicate on the "h2_akamai_expected" field.
+func H2AkamaiExpectedHasSuffix(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldHasSuffix(FieldH2AkamaiExpected, v))
+}
+
+// H2AkamaiExpectedIsNil applies the IsNil predicate on the "h2_akamai_expected" field.
+func H2AkamaiExpectedIsNil() predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldIsNull(FieldH2AkamaiExpected))
+}
+
+// H2AkamaiExpectedNotNil applies the NotNil predicate on the "h2_akamai_expected" field.
+func H2AkamaiExpectedNotNil() predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldNotNull(FieldH2AkamaiExpected))
+}
+
+// H2AkamaiExpectedEqualFold applies the EqualFold predicate on the "h2_akamai_expected" field.
+func H2AkamaiExpectedEqualFold(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldEqualFold(FieldH2AkamaiExpected, v))
+}
+
+// H2AkamaiExpectedContainsFold applies the ContainsFold predicate on the "h2_akamai_expected" field.
+func H2AkamaiExpectedContainsFold(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldContainsFold(FieldH2AkamaiExpected, v))
+}
+
+// H2SourceEQ applies the EQ predicate on the "h2_source" field.
+func H2SourceEQ(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldEQ(FieldH2Source, v))
+}
+
+// H2SourceNEQ applies the NEQ predicate on the "h2_source" field.
+func H2SourceNEQ(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldNEQ(FieldH2Source, v))
+}
+
+// H2SourceIn applies the In predicate on the "h2_source" field.
+func H2SourceIn(vs ...string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldIn(FieldH2Source, vs...))
+}
+
+// H2SourceNotIn applies the NotIn predicate on the "h2_source" field.
+func H2SourceNotIn(vs ...string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldNotIn(FieldH2Source, vs...))
+}
+
+// H2SourceGT applies the GT predicate on the "h2_source" field.
+func H2SourceGT(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldGT(FieldH2Source, v))
+}
+
+// H2SourceGTE applies the GTE predicate on the "h2_source" field.
+func H2SourceGTE(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldGTE(FieldH2Source, v))
+}
+
+// H2SourceLT applies the LT predicate on the "h2_source" field.
+func H2SourceLT(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldLT(FieldH2Source, v))
+}
+
+// H2SourceLTE applies the LTE predicate on the "h2_source" field.
+func H2SourceLTE(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldLTE(FieldH2Source, v))
+}
+
+// H2SourceContains applies the Contains predicate on the "h2_source" field.
+func H2SourceContains(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldContains(FieldH2Source, v))
+}
+
+// H2SourceHasPrefix applies the HasPrefix predicate on the "h2_source" field.
+func H2SourceHasPrefix(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldHasPrefix(FieldH2Source, v))
+}
+
+// H2SourceHasSuffix applies the HasSuffix predicate on the "h2_source" field.
+func H2SourceHasSuffix(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldHasSuffix(FieldH2Source, v))
+}
+
+// H2SourceIsNil applies the IsNil predicate on the "h2_source" field.
+func H2SourceIsNil() predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldIsNull(FieldH2Source))
+}
+
+// H2SourceNotNil applies the NotNil predicate on the "h2_source" field.
+func H2SourceNotNil() predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldNotNull(FieldH2Source))
+}
+
+// H2SourceEqualFold applies the EqualFold predicate on the "h2_source" field.
+func H2SourceEqualFold(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldEqualFold(FieldH2Source, v))
+}
+
+// H2SourceContainsFold applies the ContainsFold predicate on the "h2_source" field.
+func H2SourceContainsFold(v string) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldContainsFold(FieldH2Source, v))
+}
+
+// ShuffleExtensionsEQ applies the EQ predicate on the "shuffle_extensions" field.
+func ShuffleExtensionsEQ(v bool) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldEQ(FieldShuffleExtensions, v))
+}
+
+// ShuffleExtensionsNEQ applies the NEQ predicate on the "shuffle_extensions" field.
+func ShuffleExtensionsNEQ(v bool) predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldNEQ(FieldShuffleExtensions, v))
+}
+
+// ShuffleExtensionsIsNil applies the IsNil predicate on the "shuffle_extensions" field.
+func ShuffleExtensionsIsNil() predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldIsNull(FieldShuffleExtensions))
+}
+
+// ShuffleExtensionsNotNil applies the NotNil predicate on the "shuffle_extensions" field.
+func ShuffleExtensionsNotNil() predicate.TLSFingerprintProfile {
+	return predicate.TLSFingerprintProfile(sql.FieldNotNull(FieldShuffleExtensions))
 }
 
 // And groups predicates with the AND operator between them.

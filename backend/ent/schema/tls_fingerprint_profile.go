@@ -96,5 +96,44 @@ func (TLSFingerprintProfile) Fields() []ent.Field {
 		field.JSON("extensions", []uint16{}).
 			Optional().
 			SchemaType(map[string]string{dialect.Postgres: "jsonb"}),
+
+		// ---- 档2 HTTP/2 帧级指纹（每个 Profile 携带自己的 H2 特征，可后台编辑，运行时按需生效）----
+
+		// h2_settings: HTTP/2 SETTINGS，按发送顺序排列的 [id,val] 对，如 [[1,65536],[2,0],[4,6291456],[6,262144]]。
+		// 为空则回退到按客户端类型选择的内置默认 spec。顺序敏感，影响 Akamai H2 指纹。
+		field.JSON("h2_settings", [][]uint32{}).
+			Optional().
+			SchemaType(map[string]string{dialect.Postgres: "jsonb"}),
+
+		// h2_connection_flow: 连接级 WINDOW_UPDATE 增量；0 表示用库默认。
+		field.Uint32("h2_connection_flow").
+			Optional().
+			Default(0),
+
+		// h2_pseudo_header_order: 伪头发送顺序（全名），如 [":method",":authority",":scheme",":path"]。
+		field.JSON("h2_pseudo_header_order", []string{}).
+			Optional().
+			SchemaType(map[string]string{dialect.Postgres: "jsonb"}),
+
+		// h2_header_order: 普通 header 发送顺序（小写）；为空则不强制。
+		field.JSON("h2_header_order", []string{}).
+			Optional().
+			SchemaType(map[string]string{dialect.Postgres: "jsonb"}),
+
+		// h2_akamai_expected: 该 Profile H2 指纹的目标 Akamai 串，用于服务端自校验（抓包→粘贴→回放断言字节一致）。
+		field.Text("h2_akamai_expected").
+			Optional().
+			Nillable(),
+
+		// h2_source: H2 指纹来源/版本备注（如 "tls.peet.ws capture codex_cli_rs 0.x @2026-08"），只作溯源展示。
+		field.Text("h2_source").
+			Optional().
+			Nillable(),
+
+		// shuffle_extensions: 是否每连接随机打乱 TLS 扩展顺序（模拟 rustls/reqwest：JA3 每次变、
+		// JA4 因排序稳定）。默认 false 保持固定顺序（undici/Node 等不随机化的客户端）。
+		field.Bool("shuffle_extensions").
+			Optional().
+			Default(false),
 	}
 }

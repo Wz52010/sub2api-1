@@ -13,22 +13,31 @@ import (
 // TLSFingerprintProfile TLS 指纹配置模板
 // 包含完整的 ClientHello 参数，用于模拟特定客户端的 TLS 握手特征
 type TLSFingerprintProfile struct {
-	ID                  int64     `json:"id"`
-	Name                string    `json:"name"`
-	Description         *string   `json:"description"`
-	EnableGREASE        bool      `json:"enable_grease"`
-	CipherSuites        []uint16  `json:"cipher_suites"`
-	Curves              []uint16  `json:"curves"`
-	PointFormats        []uint16  `json:"point_formats"`
-	SignatureAlgorithms []uint16  `json:"signature_algorithms"`
-	ALPNProtocols       []string  `json:"alpn_protocols"`
-	SupportedVersions   []uint16  `json:"supported_versions"`
-	KeyShareGroups      []uint16  `json:"key_share_groups"`
-	PSKModes            []uint16  `json:"psk_modes"`
-	Extensions          []uint16  `json:"extensions"`
-	CreatedAt           time.Time `json:"created_at"`
-	UpdatedAt           time.Time `json:"updated_at"`
-	Metadata            TLSFingerprintProfileMetadata `json:"metadata"`
+	ID                  int64    `json:"id"`
+	Name                string   `json:"name"`
+	Description         *string  `json:"description"`
+	EnableGREASE        bool     `json:"enable_grease"`
+	CipherSuites        []uint16 `json:"cipher_suites"`
+	Curves              []uint16 `json:"curves"`
+	PointFormats        []uint16 `json:"point_formats"`
+	SignatureAlgorithms []uint16 `json:"signature_algorithms"`
+	ALPNProtocols       []string `json:"alpn_protocols"`
+	SupportedVersions   []uint16 `json:"supported_versions"`
+	KeyShareGroups      []uint16 `json:"key_share_groups"`
+	PSKModes            []uint16 `json:"psk_modes"`
+	Extensions          []uint16 `json:"extensions"`
+	// ---- 档2 HTTP/2 帧级指纹（可后台编辑；为空回退按客户端类型的默认 spec）----
+	H2Settings          [][]uint32 `json:"h2_settings"`
+	H2ConnectionFlow    uint32     `json:"h2_connection_flow"`
+	H2PseudoHeaderOrder []string   `json:"h2_pseudo_header_order"`
+	H2HeaderOrder       []string   `json:"h2_header_order"`
+	H2AkamaiExpected    *string    `json:"h2_akamai_expected"`
+	H2Source            *string    `json:"h2_source"`
+	// 档2 TLS 扩展顺序随机化（模拟 rustls/reqwest 的 JA3 每连接变化；JA4 稳定）
+	ShuffleExtensions bool                          `json:"shuffle_extensions"`
+	CreatedAt         time.Time                     `json:"created_at"`
+	UpdatedAt         time.Time                     `json:"updated_at"`
+	Metadata          TLSFingerprintProfileMetadata `json:"metadata"`
 }
 
 // TLSFingerprintProfileMetadata describes the effective profile capabilities
@@ -66,6 +75,11 @@ func (p *TLSFingerprintProfile) ToTLSProfile() *tlsfingerprint.Profile {
 		KeyShareGroups:      p.KeyShareGroups,
 		PSKModes:            p.PSKModes,
 		Extensions:          p.Extensions,
+		H2Settings:          p.H2Settings,
+		H2ConnectionFlow:    p.H2ConnectionFlow,
+		H2PseudoHeaderOrder: p.H2PseudoHeaderOrder,
+		H2HeaderOrder:       p.H2HeaderOrder,
+		ShuffleExtensions:   p.ShuffleExtensions,
 	}
 }
 

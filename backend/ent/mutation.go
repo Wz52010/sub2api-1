@@ -41537,36 +41537,47 @@ func (m *SubscriptionPlanMutation) ResetEdge(name string) error {
 // TLSFingerprintProfileMutation represents an operation that mutates the TLSFingerprintProfile nodes in the graph.
 type TLSFingerprintProfileMutation struct {
 	config
-	op                         Op
-	typ                        string
-	id                         *int64
-	created_at                 *time.Time
-	updated_at                 *time.Time
-	name                       *string
-	description                *string
-	enable_grease              *bool
-	cipher_suites              *[]uint16
-	appendcipher_suites        []uint16
-	curves                     *[]uint16
-	appendcurves               []uint16
-	point_formats              *[]uint16
-	appendpoint_formats        []uint16
-	signature_algorithms       *[]uint16
-	appendsignature_algorithms []uint16
-	alpn_protocols             *[]string
-	appendalpn_protocols       []string
-	supported_versions         *[]uint16
-	appendsupported_versions   []uint16
-	key_share_groups           *[]uint16
-	appendkey_share_groups     []uint16
-	psk_modes                  *[]uint16
-	appendpsk_modes            []uint16
-	extensions                 *[]uint16
-	appendextensions           []uint16
-	clearedFields              map[string]struct{}
-	done                       bool
-	oldValue                   func(context.Context) (*TLSFingerprintProfile, error)
-	predicates                 []predicate.TLSFingerprintProfile
+	op                           Op
+	typ                          string
+	id                           *int64
+	created_at                   *time.Time
+	updated_at                   *time.Time
+	name                         *string
+	description                  *string
+	enable_grease                *bool
+	cipher_suites                *[]uint16
+	appendcipher_suites          []uint16
+	curves                       *[]uint16
+	appendcurves                 []uint16
+	point_formats                *[]uint16
+	appendpoint_formats          []uint16
+	signature_algorithms         *[]uint16
+	appendsignature_algorithms   []uint16
+	alpn_protocols               *[]string
+	appendalpn_protocols         []string
+	supported_versions           *[]uint16
+	appendsupported_versions     []uint16
+	key_share_groups             *[]uint16
+	appendkey_share_groups       []uint16
+	psk_modes                    *[]uint16
+	appendpsk_modes              []uint16
+	extensions                   *[]uint16
+	appendextensions             []uint16
+	h2_settings                  *[][]uint32
+	appendh2_settings            [][]uint32
+	h2_connection_flow           *uint32
+	addh2_connection_flow        *int32
+	h2_pseudo_header_order       *[]string
+	appendh2_pseudo_header_order []string
+	h2_header_order              *[]string
+	appendh2_header_order        []string
+	h2_akamai_expected           *string
+	h2_source                    *string
+	shuffle_extensions           *bool
+	clearedFields                map[string]struct{}
+	done                         bool
+	oldValue                     func(context.Context) (*TLSFingerprintProfile, error)
+	predicates                   []predicate.TLSFingerprintProfile
 }
 
 var _ ent.Mutation = (*TLSFingerprintProfileMutation)(nil)
@@ -42445,6 +42456,418 @@ func (m *TLSFingerprintProfileMutation) ResetExtensions() {
 	delete(m.clearedFields, tlsfingerprintprofile.FieldExtensions)
 }
 
+// SetH2Settings sets the "h2_settings" field.
+func (m *TLSFingerprintProfileMutation) SetH2Settings(u [][]uint32) {
+	m.h2_settings = &u
+	m.appendh2_settings = nil
+}
+
+// H2Settings returns the value of the "h2_settings" field in the mutation.
+func (m *TLSFingerprintProfileMutation) H2Settings() (r [][]uint32, exists bool) {
+	v := m.h2_settings
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldH2Settings returns the old "h2_settings" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldH2Settings(ctx context.Context) (v [][]uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldH2Settings is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldH2Settings requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldH2Settings: %w", err)
+	}
+	return oldValue.H2Settings, nil
+}
+
+// AppendH2Settings adds u to the "h2_settings" field.
+func (m *TLSFingerprintProfileMutation) AppendH2Settings(u [][]uint32) {
+	m.appendh2_settings = append(m.appendh2_settings, u...)
+}
+
+// AppendedH2Settings returns the list of values that were appended to the "h2_settings" field in this mutation.
+func (m *TLSFingerprintProfileMutation) AppendedH2Settings() ([][]uint32, bool) {
+	if len(m.appendh2_settings) == 0 {
+		return nil, false
+	}
+	return m.appendh2_settings, true
+}
+
+// ClearH2Settings clears the value of the "h2_settings" field.
+func (m *TLSFingerprintProfileMutation) ClearH2Settings() {
+	m.h2_settings = nil
+	m.appendh2_settings = nil
+	m.clearedFields[tlsfingerprintprofile.FieldH2Settings] = struct{}{}
+}
+
+// H2SettingsCleared returns if the "h2_settings" field was cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) H2SettingsCleared() bool {
+	_, ok := m.clearedFields[tlsfingerprintprofile.FieldH2Settings]
+	return ok
+}
+
+// ResetH2Settings resets all changes to the "h2_settings" field.
+func (m *TLSFingerprintProfileMutation) ResetH2Settings() {
+	m.h2_settings = nil
+	m.appendh2_settings = nil
+	delete(m.clearedFields, tlsfingerprintprofile.FieldH2Settings)
+}
+
+// SetH2ConnectionFlow sets the "h2_connection_flow" field.
+func (m *TLSFingerprintProfileMutation) SetH2ConnectionFlow(u uint32) {
+	m.h2_connection_flow = &u
+	m.addh2_connection_flow = nil
+}
+
+// H2ConnectionFlow returns the value of the "h2_connection_flow" field in the mutation.
+func (m *TLSFingerprintProfileMutation) H2ConnectionFlow() (r uint32, exists bool) {
+	v := m.h2_connection_flow
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldH2ConnectionFlow returns the old "h2_connection_flow" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldH2ConnectionFlow(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldH2ConnectionFlow is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldH2ConnectionFlow requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldH2ConnectionFlow: %w", err)
+	}
+	return oldValue.H2ConnectionFlow, nil
+}
+
+// AddH2ConnectionFlow adds u to the "h2_connection_flow" field.
+func (m *TLSFingerprintProfileMutation) AddH2ConnectionFlow(u int32) {
+	if m.addh2_connection_flow != nil {
+		*m.addh2_connection_flow += u
+	} else {
+		m.addh2_connection_flow = &u
+	}
+}
+
+// AddedH2ConnectionFlow returns the value that was added to the "h2_connection_flow" field in this mutation.
+func (m *TLSFingerprintProfileMutation) AddedH2ConnectionFlow() (r int32, exists bool) {
+	v := m.addh2_connection_flow
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearH2ConnectionFlow clears the value of the "h2_connection_flow" field.
+func (m *TLSFingerprintProfileMutation) ClearH2ConnectionFlow() {
+	m.h2_connection_flow = nil
+	m.addh2_connection_flow = nil
+	m.clearedFields[tlsfingerprintprofile.FieldH2ConnectionFlow] = struct{}{}
+}
+
+// H2ConnectionFlowCleared returns if the "h2_connection_flow" field was cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) H2ConnectionFlowCleared() bool {
+	_, ok := m.clearedFields[tlsfingerprintprofile.FieldH2ConnectionFlow]
+	return ok
+}
+
+// ResetH2ConnectionFlow resets all changes to the "h2_connection_flow" field.
+func (m *TLSFingerprintProfileMutation) ResetH2ConnectionFlow() {
+	m.h2_connection_flow = nil
+	m.addh2_connection_flow = nil
+	delete(m.clearedFields, tlsfingerprintprofile.FieldH2ConnectionFlow)
+}
+
+// SetH2PseudoHeaderOrder sets the "h2_pseudo_header_order" field.
+func (m *TLSFingerprintProfileMutation) SetH2PseudoHeaderOrder(s []string) {
+	m.h2_pseudo_header_order = &s
+	m.appendh2_pseudo_header_order = nil
+}
+
+// H2PseudoHeaderOrder returns the value of the "h2_pseudo_header_order" field in the mutation.
+func (m *TLSFingerprintProfileMutation) H2PseudoHeaderOrder() (r []string, exists bool) {
+	v := m.h2_pseudo_header_order
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldH2PseudoHeaderOrder returns the old "h2_pseudo_header_order" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldH2PseudoHeaderOrder(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldH2PseudoHeaderOrder is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldH2PseudoHeaderOrder requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldH2PseudoHeaderOrder: %w", err)
+	}
+	return oldValue.H2PseudoHeaderOrder, nil
+}
+
+// AppendH2PseudoHeaderOrder adds s to the "h2_pseudo_header_order" field.
+func (m *TLSFingerprintProfileMutation) AppendH2PseudoHeaderOrder(s []string) {
+	m.appendh2_pseudo_header_order = append(m.appendh2_pseudo_header_order, s...)
+}
+
+// AppendedH2PseudoHeaderOrder returns the list of values that were appended to the "h2_pseudo_header_order" field in this mutation.
+func (m *TLSFingerprintProfileMutation) AppendedH2PseudoHeaderOrder() ([]string, bool) {
+	if len(m.appendh2_pseudo_header_order) == 0 {
+		return nil, false
+	}
+	return m.appendh2_pseudo_header_order, true
+}
+
+// ClearH2PseudoHeaderOrder clears the value of the "h2_pseudo_header_order" field.
+func (m *TLSFingerprintProfileMutation) ClearH2PseudoHeaderOrder() {
+	m.h2_pseudo_header_order = nil
+	m.appendh2_pseudo_header_order = nil
+	m.clearedFields[tlsfingerprintprofile.FieldH2PseudoHeaderOrder] = struct{}{}
+}
+
+// H2PseudoHeaderOrderCleared returns if the "h2_pseudo_header_order" field was cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) H2PseudoHeaderOrderCleared() bool {
+	_, ok := m.clearedFields[tlsfingerprintprofile.FieldH2PseudoHeaderOrder]
+	return ok
+}
+
+// ResetH2PseudoHeaderOrder resets all changes to the "h2_pseudo_header_order" field.
+func (m *TLSFingerprintProfileMutation) ResetH2PseudoHeaderOrder() {
+	m.h2_pseudo_header_order = nil
+	m.appendh2_pseudo_header_order = nil
+	delete(m.clearedFields, tlsfingerprintprofile.FieldH2PseudoHeaderOrder)
+}
+
+// SetH2HeaderOrder sets the "h2_header_order" field.
+func (m *TLSFingerprintProfileMutation) SetH2HeaderOrder(s []string) {
+	m.h2_header_order = &s
+	m.appendh2_header_order = nil
+}
+
+// H2HeaderOrder returns the value of the "h2_header_order" field in the mutation.
+func (m *TLSFingerprintProfileMutation) H2HeaderOrder() (r []string, exists bool) {
+	v := m.h2_header_order
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldH2HeaderOrder returns the old "h2_header_order" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldH2HeaderOrder(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldH2HeaderOrder is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldH2HeaderOrder requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldH2HeaderOrder: %w", err)
+	}
+	return oldValue.H2HeaderOrder, nil
+}
+
+// AppendH2HeaderOrder adds s to the "h2_header_order" field.
+func (m *TLSFingerprintProfileMutation) AppendH2HeaderOrder(s []string) {
+	m.appendh2_header_order = append(m.appendh2_header_order, s...)
+}
+
+// AppendedH2HeaderOrder returns the list of values that were appended to the "h2_header_order" field in this mutation.
+func (m *TLSFingerprintProfileMutation) AppendedH2HeaderOrder() ([]string, bool) {
+	if len(m.appendh2_header_order) == 0 {
+		return nil, false
+	}
+	return m.appendh2_header_order, true
+}
+
+// ClearH2HeaderOrder clears the value of the "h2_header_order" field.
+func (m *TLSFingerprintProfileMutation) ClearH2HeaderOrder() {
+	m.h2_header_order = nil
+	m.appendh2_header_order = nil
+	m.clearedFields[tlsfingerprintprofile.FieldH2HeaderOrder] = struct{}{}
+}
+
+// H2HeaderOrderCleared returns if the "h2_header_order" field was cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) H2HeaderOrderCleared() bool {
+	_, ok := m.clearedFields[tlsfingerprintprofile.FieldH2HeaderOrder]
+	return ok
+}
+
+// ResetH2HeaderOrder resets all changes to the "h2_header_order" field.
+func (m *TLSFingerprintProfileMutation) ResetH2HeaderOrder() {
+	m.h2_header_order = nil
+	m.appendh2_header_order = nil
+	delete(m.clearedFields, tlsfingerprintprofile.FieldH2HeaderOrder)
+}
+
+// SetH2AkamaiExpected sets the "h2_akamai_expected" field.
+func (m *TLSFingerprintProfileMutation) SetH2AkamaiExpected(s string) {
+	m.h2_akamai_expected = &s
+}
+
+// H2AkamaiExpected returns the value of the "h2_akamai_expected" field in the mutation.
+func (m *TLSFingerprintProfileMutation) H2AkamaiExpected() (r string, exists bool) {
+	v := m.h2_akamai_expected
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldH2AkamaiExpected returns the old "h2_akamai_expected" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldH2AkamaiExpected(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldH2AkamaiExpected is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldH2AkamaiExpected requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldH2AkamaiExpected: %w", err)
+	}
+	return oldValue.H2AkamaiExpected, nil
+}
+
+// ClearH2AkamaiExpected clears the value of the "h2_akamai_expected" field.
+func (m *TLSFingerprintProfileMutation) ClearH2AkamaiExpected() {
+	m.h2_akamai_expected = nil
+	m.clearedFields[tlsfingerprintprofile.FieldH2AkamaiExpected] = struct{}{}
+}
+
+// H2AkamaiExpectedCleared returns if the "h2_akamai_expected" field was cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) H2AkamaiExpectedCleared() bool {
+	_, ok := m.clearedFields[tlsfingerprintprofile.FieldH2AkamaiExpected]
+	return ok
+}
+
+// ResetH2AkamaiExpected resets all changes to the "h2_akamai_expected" field.
+func (m *TLSFingerprintProfileMutation) ResetH2AkamaiExpected() {
+	m.h2_akamai_expected = nil
+	delete(m.clearedFields, tlsfingerprintprofile.FieldH2AkamaiExpected)
+}
+
+// SetH2Source sets the "h2_source" field.
+func (m *TLSFingerprintProfileMutation) SetH2Source(s string) {
+	m.h2_source = &s
+}
+
+// H2Source returns the value of the "h2_source" field in the mutation.
+func (m *TLSFingerprintProfileMutation) H2Source() (r string, exists bool) {
+	v := m.h2_source
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldH2Source returns the old "h2_source" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldH2Source(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldH2Source is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldH2Source requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldH2Source: %w", err)
+	}
+	return oldValue.H2Source, nil
+}
+
+// ClearH2Source clears the value of the "h2_source" field.
+func (m *TLSFingerprintProfileMutation) ClearH2Source() {
+	m.h2_source = nil
+	m.clearedFields[tlsfingerprintprofile.FieldH2Source] = struct{}{}
+}
+
+// H2SourceCleared returns if the "h2_source" field was cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) H2SourceCleared() bool {
+	_, ok := m.clearedFields[tlsfingerprintprofile.FieldH2Source]
+	return ok
+}
+
+// ResetH2Source resets all changes to the "h2_source" field.
+func (m *TLSFingerprintProfileMutation) ResetH2Source() {
+	m.h2_source = nil
+	delete(m.clearedFields, tlsfingerprintprofile.FieldH2Source)
+}
+
+// SetShuffleExtensions sets the "shuffle_extensions" field.
+func (m *TLSFingerprintProfileMutation) SetShuffleExtensions(b bool) {
+	m.shuffle_extensions = &b
+}
+
+// ShuffleExtensions returns the value of the "shuffle_extensions" field in the mutation.
+func (m *TLSFingerprintProfileMutation) ShuffleExtensions() (r bool, exists bool) {
+	v := m.shuffle_extensions
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldShuffleExtensions returns the old "shuffle_extensions" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldShuffleExtensions(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldShuffleExtensions is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldShuffleExtensions requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldShuffleExtensions: %w", err)
+	}
+	return oldValue.ShuffleExtensions, nil
+}
+
+// ClearShuffleExtensions clears the value of the "shuffle_extensions" field.
+func (m *TLSFingerprintProfileMutation) ClearShuffleExtensions() {
+	m.shuffle_extensions = nil
+	m.clearedFields[tlsfingerprintprofile.FieldShuffleExtensions] = struct{}{}
+}
+
+// ShuffleExtensionsCleared returns if the "shuffle_extensions" field was cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) ShuffleExtensionsCleared() bool {
+	_, ok := m.clearedFields[tlsfingerprintprofile.FieldShuffleExtensions]
+	return ok
+}
+
+// ResetShuffleExtensions resets all changes to the "shuffle_extensions" field.
+func (m *TLSFingerprintProfileMutation) ResetShuffleExtensions() {
+	m.shuffle_extensions = nil
+	delete(m.clearedFields, tlsfingerprintprofile.FieldShuffleExtensions)
+}
+
 // Where appends a list predicates to the TLSFingerprintProfileMutation builder.
 func (m *TLSFingerprintProfileMutation) Where(ps ...predicate.TLSFingerprintProfile) {
 	m.predicates = append(m.predicates, ps...)
@@ -42479,7 +42902,7 @@ func (m *TLSFingerprintProfileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TLSFingerprintProfileMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 21)
 	if m.created_at != nil {
 		fields = append(fields, tlsfingerprintprofile.FieldCreatedAt)
 	}
@@ -42522,6 +42945,27 @@ func (m *TLSFingerprintProfileMutation) Fields() []string {
 	if m.extensions != nil {
 		fields = append(fields, tlsfingerprintprofile.FieldExtensions)
 	}
+	if m.h2_settings != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldH2Settings)
+	}
+	if m.h2_connection_flow != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldH2ConnectionFlow)
+	}
+	if m.h2_pseudo_header_order != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldH2PseudoHeaderOrder)
+	}
+	if m.h2_header_order != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldH2HeaderOrder)
+	}
+	if m.h2_akamai_expected != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldH2AkamaiExpected)
+	}
+	if m.h2_source != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldH2Source)
+	}
+	if m.shuffle_extensions != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldShuffleExtensions)
+	}
 	return fields
 }
 
@@ -42558,6 +43002,20 @@ func (m *TLSFingerprintProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.PskModes()
 	case tlsfingerprintprofile.FieldExtensions:
 		return m.Extensions()
+	case tlsfingerprintprofile.FieldH2Settings:
+		return m.H2Settings()
+	case tlsfingerprintprofile.FieldH2ConnectionFlow:
+		return m.H2ConnectionFlow()
+	case tlsfingerprintprofile.FieldH2PseudoHeaderOrder:
+		return m.H2PseudoHeaderOrder()
+	case tlsfingerprintprofile.FieldH2HeaderOrder:
+		return m.H2HeaderOrder()
+	case tlsfingerprintprofile.FieldH2AkamaiExpected:
+		return m.H2AkamaiExpected()
+	case tlsfingerprintprofile.FieldH2Source:
+		return m.H2Source()
+	case tlsfingerprintprofile.FieldShuffleExtensions:
+		return m.ShuffleExtensions()
 	}
 	return nil, false
 }
@@ -42595,6 +43053,20 @@ func (m *TLSFingerprintProfileMutation) OldField(ctx context.Context, name strin
 		return m.OldPskModes(ctx)
 	case tlsfingerprintprofile.FieldExtensions:
 		return m.OldExtensions(ctx)
+	case tlsfingerprintprofile.FieldH2Settings:
+		return m.OldH2Settings(ctx)
+	case tlsfingerprintprofile.FieldH2ConnectionFlow:
+		return m.OldH2ConnectionFlow(ctx)
+	case tlsfingerprintprofile.FieldH2PseudoHeaderOrder:
+		return m.OldH2PseudoHeaderOrder(ctx)
+	case tlsfingerprintprofile.FieldH2HeaderOrder:
+		return m.OldH2HeaderOrder(ctx)
+	case tlsfingerprintprofile.FieldH2AkamaiExpected:
+		return m.OldH2AkamaiExpected(ctx)
+	case tlsfingerprintprofile.FieldH2Source:
+		return m.OldH2Source(ctx)
+	case tlsfingerprintprofile.FieldShuffleExtensions:
+		return m.OldShuffleExtensions(ctx)
 	}
 	return nil, fmt.Errorf("unknown TLSFingerprintProfile field %s", name)
 }
@@ -42702,6 +43174,55 @@ func (m *TLSFingerprintProfileMutation) SetField(name string, value ent.Value) e
 		}
 		m.SetExtensions(v)
 		return nil
+	case tlsfingerprintprofile.FieldH2Settings:
+		v, ok := value.([][]uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetH2Settings(v)
+		return nil
+	case tlsfingerprintprofile.FieldH2ConnectionFlow:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetH2ConnectionFlow(v)
+		return nil
+	case tlsfingerprintprofile.FieldH2PseudoHeaderOrder:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetH2PseudoHeaderOrder(v)
+		return nil
+	case tlsfingerprintprofile.FieldH2HeaderOrder:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetH2HeaderOrder(v)
+		return nil
+	case tlsfingerprintprofile.FieldH2AkamaiExpected:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetH2AkamaiExpected(v)
+		return nil
+	case tlsfingerprintprofile.FieldH2Source:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetH2Source(v)
+		return nil
+	case tlsfingerprintprofile.FieldShuffleExtensions:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetShuffleExtensions(v)
+		return nil
 	}
 	return fmt.Errorf("unknown TLSFingerprintProfile field %s", name)
 }
@@ -42709,13 +43230,21 @@ func (m *TLSFingerprintProfileMutation) SetField(name string, value ent.Value) e
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *TLSFingerprintProfileMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addh2_connection_flow != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldH2ConnectionFlow)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *TLSFingerprintProfileMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case tlsfingerprintprofile.FieldH2ConnectionFlow:
+		return m.AddedH2ConnectionFlow()
+	}
 	return nil, false
 }
 
@@ -42724,6 +43253,13 @@ func (m *TLSFingerprintProfileMutation) AddedField(name string) (ent.Value, bool
 // type.
 func (m *TLSFingerprintProfileMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case tlsfingerprintprofile.FieldH2ConnectionFlow:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddH2ConnectionFlow(v)
+		return nil
 	}
 	return fmt.Errorf("unknown TLSFingerprintProfile numeric field %s", name)
 }
@@ -42761,6 +43297,27 @@ func (m *TLSFingerprintProfileMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(tlsfingerprintprofile.FieldExtensions) {
 		fields = append(fields, tlsfingerprintprofile.FieldExtensions)
+	}
+	if m.FieldCleared(tlsfingerprintprofile.FieldH2Settings) {
+		fields = append(fields, tlsfingerprintprofile.FieldH2Settings)
+	}
+	if m.FieldCleared(tlsfingerprintprofile.FieldH2ConnectionFlow) {
+		fields = append(fields, tlsfingerprintprofile.FieldH2ConnectionFlow)
+	}
+	if m.FieldCleared(tlsfingerprintprofile.FieldH2PseudoHeaderOrder) {
+		fields = append(fields, tlsfingerprintprofile.FieldH2PseudoHeaderOrder)
+	}
+	if m.FieldCleared(tlsfingerprintprofile.FieldH2HeaderOrder) {
+		fields = append(fields, tlsfingerprintprofile.FieldH2HeaderOrder)
+	}
+	if m.FieldCleared(tlsfingerprintprofile.FieldH2AkamaiExpected) {
+		fields = append(fields, tlsfingerprintprofile.FieldH2AkamaiExpected)
+	}
+	if m.FieldCleared(tlsfingerprintprofile.FieldH2Source) {
+		fields = append(fields, tlsfingerprintprofile.FieldH2Source)
+	}
+	if m.FieldCleared(tlsfingerprintprofile.FieldShuffleExtensions) {
+		fields = append(fields, tlsfingerprintprofile.FieldShuffleExtensions)
 	}
 	return fields
 }
@@ -42805,6 +43362,27 @@ func (m *TLSFingerprintProfileMutation) ClearField(name string) error {
 		return nil
 	case tlsfingerprintprofile.FieldExtensions:
 		m.ClearExtensions()
+		return nil
+	case tlsfingerprintprofile.FieldH2Settings:
+		m.ClearH2Settings()
+		return nil
+	case tlsfingerprintprofile.FieldH2ConnectionFlow:
+		m.ClearH2ConnectionFlow()
+		return nil
+	case tlsfingerprintprofile.FieldH2PseudoHeaderOrder:
+		m.ClearH2PseudoHeaderOrder()
+		return nil
+	case tlsfingerprintprofile.FieldH2HeaderOrder:
+		m.ClearH2HeaderOrder()
+		return nil
+	case tlsfingerprintprofile.FieldH2AkamaiExpected:
+		m.ClearH2AkamaiExpected()
+		return nil
+	case tlsfingerprintprofile.FieldH2Source:
+		m.ClearH2Source()
+		return nil
+	case tlsfingerprintprofile.FieldShuffleExtensions:
+		m.ClearShuffleExtensions()
 		return nil
 	}
 	return fmt.Errorf("unknown TLSFingerprintProfile nullable field %s", name)
@@ -42855,6 +43433,27 @@ func (m *TLSFingerprintProfileMutation) ResetField(name string) error {
 		return nil
 	case tlsfingerprintprofile.FieldExtensions:
 		m.ResetExtensions()
+		return nil
+	case tlsfingerprintprofile.FieldH2Settings:
+		m.ResetH2Settings()
+		return nil
+	case tlsfingerprintprofile.FieldH2ConnectionFlow:
+		m.ResetH2ConnectionFlow()
+		return nil
+	case tlsfingerprintprofile.FieldH2PseudoHeaderOrder:
+		m.ResetH2PseudoHeaderOrder()
+		return nil
+	case tlsfingerprintprofile.FieldH2HeaderOrder:
+		m.ResetH2HeaderOrder()
+		return nil
+	case tlsfingerprintprofile.FieldH2AkamaiExpected:
+		m.ResetH2AkamaiExpected()
+		return nil
+	case tlsfingerprintprofile.FieldH2Source:
+		m.ResetH2Source()
+		return nil
+	case tlsfingerprintprofile.FieldShuffleExtensions:
+		m.ResetShuffleExtensions()
 		return nil
 	}
 	return fmt.Errorf("unknown TLSFingerprintProfile field %s", name)

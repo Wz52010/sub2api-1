@@ -1576,6 +1576,13 @@ var (
 		{Name: "key_share_groups", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "psk_modes", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "extensions", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "h2_settings", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "h2_connection_flow", Type: field.TypeUint32, Nullable: true, Default: 0},
+		{Name: "h2_pseudo_header_order", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "h2_header_order", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "h2_akamai_expected", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "h2_source", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "shuffle_extensions", Type: field.TypeBool, Nullable: true, Default: false},
 	}
 	// TLSFingerprintProfilesTable holds the schema information for the "tls_fingerprint_profiles" table.
 	TLSFingerprintProfilesTable = &schema.Table{
