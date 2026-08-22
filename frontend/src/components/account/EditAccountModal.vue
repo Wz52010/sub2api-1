@@ -4110,6 +4110,17 @@ function loadQuotaControlSettings(account: Account) {
   customBaseUrlEnabled.value = false
   customBaseUrl.value = ''
 
+  // Load TLS fingerprint setting（对所有平台生效：anthropic 与 openai 等）。
+  // 必须放在下面 platform/type 的提前 return 之前，否则非 anthropic 账号(如 openai)
+  // 永远走不到这里，开关状态读不回来（看起来像没保存）。顶层字段可能为空，回退读 extra。
+  const acctExtra = (account as any).extra as Record<string, any> | undefined
+  if (account.enable_tls_fingerprint === true || acctExtra?.enable_tls_fingerprint === true) {
+    tlsFingerprintEnabled.value = true
+  }
+  tlsFingerprintProfileId.value = account.tls_fingerprint_profile_id
+    ?? (acctExtra?.tls_fingerprint_profile_id as number | undefined)
+    ?? null
+
   // Remaining quota control settings only apply to Anthropic accounts
   if (account.platform !== 'anthropic') {
     return
@@ -4143,15 +4154,6 @@ function loadQuotaControlSettings(account: Account) {
 
   // UMQ mode（独立于 RPM 加载，防止编辑无 RPM 账号时丢失已有配置）
   userMsgQueueMode.value = account.user_msg_queue_mode ?? ''
-
-  // Load TLS fingerprint setting（openai 等平台顶层字段可能为空，回退读 extra）
-  const acctExtra = (account as any).extra as Record<string, any> | undefined
-  if (account.enable_tls_fingerprint === true || acctExtra?.enable_tls_fingerprint === true) {
-    tlsFingerprintEnabled.value = true
-  }
-  tlsFingerprintProfileId.value = account.tls_fingerprint_profile_id
-    ?? (acctExtra?.tls_fingerprint_profile_id as number | undefined)
-    ?? null
 
   // Load session ID masking setting
   if (account.session_id_masking_enabled === true) {
