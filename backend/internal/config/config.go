@@ -1325,6 +1325,23 @@ type GatewayUsageRecordConfig struct {
 type TLSFingerprintConfig struct {
 	// Enabled: 是否全局启用TLS指纹功能
 	Enabled bool `mapstructure:"enabled"`
+	// HTTP2Enabled: 是否允许 TLS 指纹链路协商并使用 HTTP/2（档1）。
+	// 默认 false，保持既有强制 HTTP/1.1 行为。仅当此开关为 true 且账号绑定的
+	// Profile 的 ALPN 包含 "h2" 时，指纹 Transport 才会走 http2.Transport（复用
+	// utls 连接的 DialTLSContext）。关闭此开关即全量回退到 HTTP/1.1，可即时回滚。
+	// 注意：本档仅提升协议层到 HTTP/2，H2 SETTINGS/WINDOW_UPDATE/header 顺序仍是
+	// Go 运行时特征（非 undici/reqwest），彻底的 H2 指纹属于档2范畴。
+	HTTP2Enabled bool `mapstructure:"http2_enabled"`
+	// HTTP2FrameFingerprintEnabled: 是否启用 HTTP/2 帧级指纹（档2）。默认 false。
+	// 仅当此开关为 true 且账号绑定 Profile 的 ALPN 含 "h2" 且代理支持指纹拨号时，指纹
+	// Transport 才改用 bogdanfinn/fhttp 的 http2.Transport，按客户端类型（undici/reqwest）
+	// 精确设定 SETTINGS/WINDOW_UPDATE/伪头顺序等 H2 帧特征。此开关优先于 HTTP2Enabled；
+	// 关闭即回退到档1（Go 原生 H2）或 HTTP/1.1，可即时回滚。
+	HTTP2FrameFingerprintEnabled bool `mapstructure:"http2_frame_fingerprint_enabled"`
+	// OpenAIEnabled: 是否允许"已开启 TLS 指纹"的 OpenAI/Codex 账号从原生转发(Do)改走
+	// utls/fhttp 指纹 transport(DoWithTLS)。默认 false，保持 OpenAI 原生路径稳定；仅对
+	// 显式开启指纹并绑定 Profile 的账号生效；关闭即全部回退原生路径，可即时回滚。
+	OpenAIEnabled bool `mapstructure:"openai_enabled"`
 	// Profiles: 预定义的TLS指纹配置模板
 	// key 为模板名称，如 "claude_cli_v2", "chrome_120" 等
 	Profiles map[string]TLSProfileConfig `mapstructure:"profiles"`
@@ -2427,6 +2444,15 @@ func setDefaults() {
 	viper.SetDefault("gateway.user_message_queue.cleanup_interval_seconds", 60)
 
 	viper.SetDefault("gateway.tls_fingerprint.enabled", true)
+	// 档1 HTTP/2 指纹开关：默认关闭，保持强制 HTTP/1.1。注册默认值后
+	// AutomaticEnv 才能通过 GATEWAY_TLS_FINGERPRINT_HTTP2_ENABLED 覆盖。
+	viper.SetDefault("gateway.tls_fingerprint.http2_enabled", false)
+	// 档2 HTTP/2 帧级指纹开关：默认关闭。注册默认值后 AutomaticEnv 才能通过
+	// GATEWAY_TLS_FINGERPRINT_HTTP2_FRAME_FINGERPRINT_ENABLED 覆盖。
+	viper.SetDefault("gateway.tls_fingerprint.http2_frame_fingerprint_enabled", false)
+	// OpenAI/Codex 走指纹链路开关：默认关闭，保持原生转发路径。env
+	// GATEWAY_TLS_FINGERPRINT_OPENAI_ENABLED 可覆盖。
+	viper.SetDefault("gateway.tls_fingerprint.openai_enabled", false)
 	viper.SetDefault("concurrency.ping_interval", 10)
 
 	// TokenRefresh

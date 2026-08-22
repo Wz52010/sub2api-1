@@ -101,6 +101,13 @@ const (
 	upstreamProtocolModeOpenAIH1         = "openai_h1"
 	upstreamProtocolModeOpenAIH2         = "openai_h2"
 	upstreamProtocolModeOpenAIH1Fallback = "openai_h1_fallback"
+	// upstreamProtocolModeFingerprintH2 标记指纹链路启用 HTTP/2（档1）。
+	// 进入 TLS 缓存键与 entry.protocolMode，使 h2 与 h1 指纹 Transport 互不复用，
+	// 并可在 transport-health 观测中区分。
+	upstreamProtocolModeFingerprintH2 = "fp_h2"
+	// upstreamProtocolModeFingerprintH2Frame 标记指纹链路启用 HTTP/2 帧级指纹（档2）。
+	// 独立缓存键，使 fhttp(自定义 H2 帧) 与 Go 原生 h2、h1 指纹 Transport 互不复用。
+	upstreamProtocolModeFingerprintH2Frame = "fp_h2_fp"
 )
 
 var errUpstreamClientLimitReached = errors.New("upstream client cache limit reached")
@@ -126,13 +133,13 @@ type openAIHTTP2Settings struct {
 // upstreamClientEntry 上游客户端缓存条目
 // 记录客户端实例及其元数据，用于连接池管理和淘汰策略
 type upstreamClientEntry struct {
-	client       *http.Client // HTTP 客户端实例
-	proxyKey     string       // 代理标识（用于检测代理变更）
-	poolKey      string       // 连接池配置标识（用于检测配置变更）
-	protocolMode string       // 协议模式（default/openai_h1/openai_h2/openai_h1_fallback）
-	fingerprintKey string     // 有效 TLS Profile 摘要；不包含 Profile 名称
-	lastUsed     int64        // 最后使用时间戳（纳秒），用于 LRU 淘汰
-	inFlight     int64        // 当前进行中的请求数，>0 时不可淘汰
+	client         *http.Client // HTTP 客户端实例
+	proxyKey       string       // 代理标识（用于检测代理变更）
+	poolKey        string       // 连接池配置标识（用于检测配置变更）
+	protocolMode   string       // 协议模式（default/openai_h1/openai_h2/openai_h1_fallback）
+	fingerprintKey string       // 有效 TLS Profile 摘要；不包含 Profile 名称
+	lastUsed       int64        // 最后使用时间戳（纳秒），用于 LRU 淘汰
+	inFlight       int64        // 当前进行中的请求数，>0 时不可淘汰
 }
 
 type openAIHTTP2FallbackState struct {
@@ -586,10 +593,24 @@ func (s *httpUpstreamService) getClientEntryWithTLS(proxyURL string, accountID i
 	}
 	settings := s.resolvePoolSettings(isolation, accountConcurrency)
 	settings = s.applyProfilePoolSettings(settings, upstreamProfile)
+	// 档1：仅当全局 HTTP/2 指纹开关打开、Profile 的 ALPN 提供 h2、且代理类型支持
+	// utls 指纹拨号(直连/socks5/http)时，才让指纹链路走 HTTP/2。任一条件不满足即
+	// 维持既有 HTTP/1.1 行为。protoMode 进入缓存键/poolKey，确保 h2 与 h1 指纹
+	// Transport 互不复用，切换开关或 ALPN 后不会命中旧连接。
+	protoMode := upstreamProtocolModeDefault
+	if profileALPNOffersH2(profile) && fingerprintH2Supported(parsedProxy) {
+		// 档2 优先于档1：帧级指纹开关打开时用 fhttp 自定义 H2 帧；否则档1 用 Go 原生 h2。
+		switch {
+		case s.tlsFingerprintHTTP2FrameEnabled():
+			protoMode = upstreamProtocolModeFingerprintH2Frame
+		case s.tlsFingerprintHTTP2Enabled():
+			protoMode = upstreamProtocolModeFingerprintH2
+		}
+	}
 	// TLS 指纹摘要必须进入缓存键，否则切换 Profile 后仍可能复用旧 Transport
 	// 及其 HTTP/2/TLS 连接。
-	cacheKey := buildTLSCacheKey(isolation, proxyKey, accountID, upstreamProtocolModeDefault, profile)
-	poolKey := buildPoolKey(settings, upstreamProtocolModeDefault) + ":tls"
+	cacheKey := buildTLSCacheKey(isolation, proxyKey, accountID, protoMode, profile)
+	poolKey := buildPoolKey(settings, protoMode) + ":tls"
 
 	now := time.Now()
 	nowUnix := now.UnixNano()
@@ -641,14 +662,42 @@ func (s *httpUpstreamService) getClientEntryWithTLS(proxyURL string, accountID i
 	}
 
 	// 创建带 TLS 指纹的 Transport
-	slog.Debug("tls_fingerprint_creating_new_client", "account_id", accountID, "cache_key", cacheKey, "proxy", proxyKey)
-	transport, err := buildUpstreamTransportWithTLSFingerprint(settings, parsedProxy, profile)
-	if err != nil {
-		s.mu.Unlock()
-		return nil, fmt.Errorf("build TLS fingerprint transport: %w", err)
+	slog.Debug("tls_fingerprint_creating_new_client", "account_id", accountID, "cache_key", cacheKey, "proxy", proxyKey, "protocol_mode", protoMode)
+	var roundTripper http.RoundTripper
+	switch protoMode {
+	case upstreamProtocolModeFingerprintH2Frame:
+		frameRT, frameErr := buildFingerprintH2FrameTransport(settings, parsedProxy, profile)
+		if frameErr != nil {
+			// 档2 构建失败(理论上已被 fingerprintH2Supported 过滤)——安全回退到
+			// HTTP/1.1 指纹路径，并把 protoMode 校正回 default，避免缓存键错标。
+			slog.Warn("tls_fingerprint_http2_frame_build_failed_fallback_h1", "account_id", accountID, "error", frameErr.Error())
+			protoMode = upstreamProtocolModeDefault
+		} else {
+			roundTripper = frameRT
+			slog.Debug("tls_fingerprint_http2_frame_enabled", "account_id", accountID)
+		}
+	case upstreamProtocolModeFingerprintH2:
+		h2Transport, h2Err := buildFingerprintHTTP2Transport(settings, parsedProxy, profile)
+		if h2Err != nil {
+			// h2 构建失败(理论上已被 fingerprintH2Supported 过滤)——安全回退到
+			// HTTP/1.1 指纹路径，并把 protoMode 校正回 default，避免缓存键错标。
+			slog.Warn("tls_fingerprint_http2_build_failed_fallback_h1", "account_id", accountID, "error", h2Err.Error())
+			protoMode = upstreamProtocolModeDefault
+		} else {
+			roundTripper = h2Transport
+			slog.Debug("tls_fingerprint_http2_enabled", "account_id", accountID)
+		}
+	}
+	if roundTripper == nil {
+		transport, err := buildUpstreamTransportWithTLSFingerprint(settings, parsedProxy, profile)
+		if err != nil {
+			s.mu.Unlock()
+			return nil, fmt.Errorf("build TLS fingerprint transport: %w", err)
+		}
+		roundTripper = transport
 	}
 
-	client := &http.Client{Transport: transport}
+	client := &http.Client{Transport: roundTripper}
 	if s.shouldValidateResolvedIP() {
 		client.CheckRedirect = s.redirectChecker
 	}
@@ -657,7 +706,7 @@ func (s *httpUpstreamService) getClientEntryWithTLS(proxyURL string, accountID i
 		client:         client,
 		proxyKey:       proxyKey,
 		poolKey:        poolKey,
-		protocolMode:   upstreamProtocolModeDefault,
+		protocolMode:   protoMode,
 		fingerprintKey: profile.FingerprintKey(),
 	}
 	atomic.StoreInt64(&entry.lastUsed, nowUnix)
@@ -1517,6 +1566,97 @@ func buildUpstreamTransportWithTLSFingerprint(settings poolSettings, proxyURL *u
 	}
 
 	return transport, nil
+}
+
+// profileALPNOffersH2 判断 Profile 的 ALPN 是否声明支持 "h2"。
+// 空 ALPN 在 dialer 中回退为 ["http/1.1"]，因此返回 false（维持 HTTP/1.1）。
+func profileALPNOffersH2(profile *tlsfingerprint.Profile) bool {
+	if profile == nil {
+		return false
+	}
+	for _, p := range profile.ALPNProtocols {
+		if strings.EqualFold(strings.TrimSpace(p), "h2") {
+			return true
+		}
+	}
+	return false
+}
+
+// fingerprintDialTLSContext 依据代理类型返回带 utls 指纹的 DialTLSContext 及其是否可用。
+// 可用场景：直连 / socks5 / http(CONNECT 隧道)。https 代理无法用明文 CONNECT 前导、
+// 未知类型不套指纹，均返回 supported=false，调用方应回退到非指纹或 HTTP/1.1 路径。
+//
+// 该函数与 buildUpstreamTransportWithTLSFingerprint 的 dialer 选择口径保持一致，
+// 供 HTTP/2 指纹 Transport（档1）复用同一 utls 拨号逻辑。
+func fingerprintDialTLSContext(proxyURL *url.URL, profile *tlsfingerprint.Profile) (func(ctx context.Context, network, addr string) (net.Conn, error), bool) {
+	if proxyURL == nil {
+		return tlsfingerprint.NewDialer(profile, nil).DialTLSContext, true
+	}
+	switch strings.ToLower(proxyURL.Scheme) {
+	case "socks5", "socks5h":
+		return tlsfingerprint.NewSOCKS5ProxyDialer(profile, proxyURL).DialTLSContext, true
+	case "http":
+		return tlsfingerprint.NewHTTPProxyDialer(profile, proxyURL).DialTLSContext, true
+	default:
+		return nil, false
+	}
+}
+
+// buildFingerprintHTTP2Transport 构建走 HTTP/2 的 TLS 指纹 Transport（档1）。
+//
+// 原理：net/http 的 h2 升级路径要求连接为 *tls.Conn，而 utls 返回 *utls.UConn，
+// 因此无法通过 http.Transport + http2.ConfigureTransports 自动升级。这里改用
+// http2.Transport 并把其 DialTLSContext 指到 utls 拨号器：当 Profile 的 ALPN 提供
+// "h2" 且上游(如 api.anthropic.com)选择 h2 时，直接在 utls 连接上跑 h2 帧。
+//
+// x/net v0.56.0 的 http2.Transport.dialTLS 在 DialTLSContext!=nil 时直接返回连接、
+// 不校验 NegotiatedProtocol；newClientConn 对连接做 connectionStater 断言，utls 的
+// ConnectionState 类型不匹配会安全跳过 tlsState（无害）。
+//
+// 仅在 fingerprintDialTLSContext 可用(直连/socks5/http)时返回 Transport；否则返回
+// error 让调用方回退到 HTTP/1.1 指纹路径。设置 ReadIdleTimeout/PingTimeout 复用与
+// OpenAI h2 一致的健康 PING，剔除被代理/NAT 静默掐断的死连接。
+func buildFingerprintHTTP2Transport(settings poolSettings, proxyURL *url.URL, profile *tlsfingerprint.Profile) (*http2.Transport, error) {
+	dial, ok := fingerprintDialTLSContext(proxyURL, profile)
+	if !ok {
+		return nil, fmt.Errorf("tls fingerprint http2 unsupported for proxy scheme %q", proxyURL.Scheme)
+	}
+	transport := &http2.Transport{
+		AllowHTTP:          false,
+		DisableCompression: false,
+		ReadIdleTimeout:    openAIHTTP2ReadIdleTimeout,
+		PingTimeout:        openAIHTTP2PingTimeout,
+		DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+			return dial(ctx, network, addr)
+		},
+	}
+	_ = settings // http2.Transport 以单连接多路复用，不复用 http.Transport 的连接池尺寸参数。
+	return transport, nil
+}
+
+// fingerprintH2Supported 轻量判断某代理类型是否支持 utls 指纹 h2 拨号（不分配拨号器，
+// 供每次请求在缓存键计算前调用）。口径须与 fingerprintDialTLSContext 一致。
+func fingerprintH2Supported(proxyURL *url.URL) bool {
+	if proxyURL == nil {
+		return true
+	}
+	switch strings.ToLower(proxyURL.Scheme) {
+	case "socks5", "socks5h", "http":
+		return true
+	default:
+		return false
+	}
+}
+
+// tlsFingerprintHTTP2Enabled 读取全局 HTTP/2 指纹开关（档1）。默认关闭。
+func (s *httpUpstreamService) tlsFingerprintHTTP2Enabled() bool {
+	return s.cfg != nil && s.cfg.Gateway.TLSFingerprint.HTTP2Enabled
+}
+
+// tlsFingerprintHTTP2FrameEnabled 读取 HTTP/2 帧级指纹开关（档2）。默认关闭。
+// 优先于档1：打开时指纹链路走 fhttp 自定义 H2 帧。
+func (s *httpUpstreamService) tlsFingerprintHTTP2FrameEnabled() bool {
+	return s.cfg != nil && s.cfg.Gateway.TLSFingerprint.HTTP2FrameFingerprintEnabled
 }
 
 // trackedBody 带跟踪功能的响应体包装器

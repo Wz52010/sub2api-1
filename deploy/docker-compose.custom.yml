@@ -1,0 +1,35 @@
+# =============================================================================
+# Sub2API Custom Source Build Overlay
+# =============================================================================
+# Combine this file with docker-compose.local.yml or docker-compose.yml from
+# the repository root. It replaces the upstream image with an image built from
+# this checkout, so the official v0.1.172 source and local customizations ship
+# together.
+#
+# Example:
+# docker compose --env-file deploy/.env \
+#   -f deploy/docker-compose.local.yml \
+#   -f deploy/docker-compose.custom.yml \
+#   up -d --build
+# =============================================================================
+
+services:
+  sub2api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        VERSION: ${SUB2API_CUSTOM_VERSION:-0.1.172-custom}
+        COMMIT: ${SUB2API_CUSTOM_COMMIT:-custom}
+    image: ${SUB2API_CUSTOM_IMAGE:-sub2api-custom:0.1.172}
+    # 档1 (HTTP/2 TLS fingerprint) toggle passthrough. Defaults to false so the
+    # baseline stays forced HTTP/1.1; deploy/.env may set it to true to allow the
+    # h2 fingerprint transport for Profiles whose ALPN offers "h2". Flip back to
+    # false and re-run `up -d` for an instant rollback.
+    environment:
+      - GATEWAY_TLS_FINGERPRINT_HTTP2_ENABLED=${GATEWAY_TLS_FINGERPRINT_HTTP2_ENABLED:-false}
+      # 档2 (custom H2 frame fingerprint via fhttp) toggle passthrough. Defaults to
+      # false; takes precedence over 档1 when true. Flip back to false + `up -d` to roll back.
+      - GATEWAY_TLS_FINGERPRINT_HTTP2_FRAME_FINGERPRINT_ENABLED=${GATEWAY_TLS_FINGERPRINT_HTTP2_FRAME_FINGERPRINT_ENABLED:-false}
+      # 档2: 让开启指纹的 OpenAI/Codex 账号走 utls/fhttp 指纹链路（默认 false，保持原生稳定）。
+      - GATEWAY_TLS_FINGERPRINT_OPENAI_ENABLED=${GATEWAY_TLS_FINGERPRINT_OPENAI_ENABLED:-false}

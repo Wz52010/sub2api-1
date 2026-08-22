@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	mrand "math/rand/v2"
 	"net"
 	"net/http"
 	"net/url"
@@ -33,6 +34,17 @@ type Profile struct {
 	KeyShareGroups      []uint16 // Empty uses [X25519]
 	PSKModes            []uint16 // Empty uses [psk_dhe_ke]
 	Extensions          []uint16 // Extension type IDs in order; empty uses default Node.js 24.x order
+
+	// ---- 档2 HTTP/2 帧级指纹（可选；为空表示未配置，调用方回退到按客户端类型选择的默认 spec）----
+	// 这些字段不影响 TLS ClientHello / JA3，只在指纹链路启用 H2 帧级指纹时决定 H2 帧特征。
+	H2Settings          [][]uint32 // 有序 [id,val] 对，如 [[1,65536],[2,0],[4,6291456],[6,262144]]
+	H2ConnectionFlow    uint32     // 连接级 WINDOW_UPDATE 增量；0 表示用库默认
+	H2PseudoHeaderOrder []string   // 伪头顺序全名，如 [":method",":authority",":scheme",":path"]
+	H2HeaderOrder       []string   // 普通 header 顺序（小写）；为空不强制
+
+	// ShuffleExtensions 为 true 时每次握手随机打乱扩展顺序（模拟 rustls/reqwest：JA3 每连接变化，
+	// JA4 因对扩展排序不受影响）。默认 false 保持固定顺序（undici/Node 等不随机化的客户端）。
+	ShuffleExtensions bool
 }
 
 // FingerprintKey returns a stable, non-sensitive key for the effective TLS
@@ -48,16 +60,21 @@ func (p *Profile) FingerprintKey() string {
 	}
 
 	canonical := struct {
-		EnableGREASE        bool     `json:"enable_grease"`
-		CipherSuites        []uint16 `json:"cipher_suites,omitempty"`
-		Curves              []uint16 `json:"curves,omitempty"`
-		PointFormats        []uint16 `json:"point_formats,omitempty"`
-		SignatureAlgorithms []uint16 `json:"signature_algorithms,omitempty"`
-		ALPNProtocols       []string `json:"alpn_protocols,omitempty"`
-		SupportedVersions   []uint16 `json:"supported_versions,omitempty"`
-		KeyShareGroups      []uint16 `json:"key_share_groups,omitempty"`
-		PSKModes            []uint16 `json:"psk_modes,omitempty"`
-		Extensions          []uint16 `json:"extensions,omitempty"`
+		EnableGREASE        bool       `json:"enable_grease"`
+		CipherSuites        []uint16   `json:"cipher_suites,omitempty"`
+		Curves              []uint16   `json:"curves,omitempty"`
+		PointFormats        []uint16   `json:"point_formats,omitempty"`
+		SignatureAlgorithms []uint16   `json:"signature_algorithms,omitempty"`
+		ALPNProtocols       []string   `json:"alpn_protocols,omitempty"`
+		SupportedVersions   []uint16   `json:"supported_versions,omitempty"`
+		KeyShareGroups      []uint16   `json:"key_share_groups,omitempty"`
+		PSKModes            []uint16   `json:"psk_modes,omitempty"`
+		Extensions          []uint16   `json:"extensions,omitempty"`
+		H2Settings          [][]uint32 `json:"h2_settings,omitempty"`
+		H2ConnectionFlow    uint32     `json:"h2_connection_flow,omitempty"`
+		H2PseudoHeaderOrder []string   `json:"h2_pseudo_header_order,omitempty"`
+		H2HeaderOrder       []string   `json:"h2_header_order,omitempty"`
+		ShuffleExtensions   bool       `json:"shuffle_extensions,omitempty"`
 	}{
 		EnableGREASE:        p.EnableGREASE,
 		CipherSuites:        canonicalUint16Slice(p.CipherSuites),
@@ -69,6 +86,11 @@ func (p *Profile) FingerprintKey() string {
 		KeyShareGroups:      canonicalUint16Slice(p.KeyShareGroups),
 		PSKModes:            canonicalUint16Slice(p.PSKModes),
 		Extensions:          canonicalUint16Slice(p.Extensions),
+		H2Settings:          p.H2Settings,
+		H2ConnectionFlow:    p.H2ConnectionFlow,
+		H2PseudoHeaderOrder: canonicalStringSlice(p.H2PseudoHeaderOrder),
+		H2HeaderOrder:       canonicalStringSlice(p.H2HeaderOrder),
+		ShuffleExtensions:   p.ShuffleExtensions,
 	}
 
 	encoded, _ := json.Marshal(canonical)
@@ -503,6 +525,12 @@ func buildClientHelloSpecFromProfile(profile *Profile) *utls.ClientHelloSpec {
 	if enableGREASE && (profile == nil || len(profile.Extensions) == 0) {
 		extensions = append([]utls.TLSExtension{&utls.UtlsGREASEExtension{}}, extensions...)
 		extensions = append(extensions, &utls.UtlsGREASEExtension{})
+	}
+
+	// 每连接扩展顺序随机化（模拟 rustls：JA3 每次变、JA4 因排序不变）。
+	// 当前 Profile 均不含 pre_shared_key(必须最后)扩展，故整体打乱无 TLS 合法性问题。
+	if profile != nil && profile.ShuffleExtensions && len(extensions) > 1 {
+		mrand.Shuffle(len(extensions), func(i, j int) { extensions[i], extensions[j] = extensions[j], extensions[i] })
 	}
 
 	return &utls.ClientHelloSpec{
