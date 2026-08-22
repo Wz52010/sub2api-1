@@ -2200,6 +2200,49 @@
           />
           <p class="input-hint">{{ t('admin.accounts.autoPauseThresholdHint') }}</p>
         </div>
+
+        <!-- TLS Fingerprint (OpenAI/Codex — 档2) -->
+        <div class="rounded-lg border border-gray-200 p-4 dark:border-dark-600">
+          <div class="flex items-center justify-between">
+            <div>
+              <label class="input-label mb-0">{{ t('admin.accounts.quotaControl.tlsFingerprint.label') }}</label>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {{ t('admin.accounts.quotaControl.tlsFingerprint.hint') }}
+              </p>
+            </div>
+            <button
+              type="button"
+              @click="tlsFingerprintEnabled = !tlsFingerprintEnabled"
+              :class="[
+                'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
+                tlsFingerprintEnabled ? 'bg-primary-600' : 'bg-gray-200 dark:bg-dark-600'
+              ]"
+            >
+              <span
+                :class="[
+                  'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                  tlsFingerprintEnabled ? 'translate-x-5' : 'translate-x-0'
+                ]"
+              />
+            </button>
+          </div>
+          <div v-if="tlsFingerprintEnabled" class="mt-3">
+            <select v-model="tlsFingerprintProfileId" class="input">
+              <option :value="null">{{ t('admin.accounts.quotaControl.tlsFingerprint.defaultProfile') }}</option>
+              <option v-if="tlsFingerprintProfiles.length > 0" :value="-1">{{ t('admin.accounts.quotaControl.tlsFingerprint.randomProfile') }}</option>
+              <option v-for="p in tlsFingerprintProfiles" :key="p.id" :value="p.id">{{ p.name }}</option>
+            </select>
+            <p v-if="selectedTLSFingerprintProfile?.metadata" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              {{ selectedTLSFingerprintProfile.metadata.client_type }} ·
+              {{ selectedTLSFingerprintProfile.metadata.client_version_range }} ·
+              {{ selectedTLSFingerprintProfile.metadata.tls_version_range }} ·
+              ALPN: {{ selectedTLSFingerprintProfile.metadata.alpn_preference }}
+            </p>
+            <p v-else-if="tlsFingerprintProfileId === -1" class="mt-2 text-xs text-amber-600 dark:text-amber-400">
+              {{ t('admin.accounts.quotaControl.tlsFingerprint.stableAssignmentHint') }}
+            </p>
+          </div>
+        </div>
       </div>
 
       <!-- 配额控制 (Anthropic OAuth/SetupToken: 亲和 + 窗口费用 + 会话 + RPM 等) -->
@@ -4101,11 +4144,14 @@ function loadQuotaControlSettings(account: Account) {
   // UMQ mode（独立于 RPM 加载，防止编辑无 RPM 账号时丢失已有配置）
   userMsgQueueMode.value = account.user_msg_queue_mode ?? ''
 
-  // Load TLS fingerprint setting
-  if (account.enable_tls_fingerprint === true) {
+  // Load TLS fingerprint setting（openai 等平台顶层字段可能为空，回退读 extra）
+  const acctExtra = (account as any).extra as Record<string, any> | undefined
+  if (account.enable_tls_fingerprint === true || acctExtra?.enable_tls_fingerprint === true) {
     tlsFingerprintEnabled.value = true
   }
-  tlsFingerprintProfileId.value = account.tls_fingerprint_profile_id ?? null
+  tlsFingerprintProfileId.value = account.tls_fingerprint_profile_id
+    ?? (acctExtra?.tls_fingerprint_profile_id as number | undefined)
+    ?? null
 
   // Load session ID masking setting
   if (account.session_id_masking_enabled === true) {

@@ -1993,12 +1993,23 @@ func (a *Account) IsAnthropicOAuthOrSetupToken() bool {
 	return a.Platform == PlatformAnthropic && (a.Type == AccountTypeOAuth || a.Type == AccountTypeSetupToken)
 }
 
+// isTLSFingerprintSupportedIdentity 限定可套 utls/fhttp 出站指纹的账号身份：
+// Anthropic 或 OpenAI/Codex 的 OAuth / SetupToken。apikey、gemini、grok 等不套指纹。
+// 注意：这是"身份是否允许套指纹"，实际是否套还取决于账号的 enable_tls_fingerprint 开关
+// 与(OpenAI 原生路径)全局开关 GATEWAY_TLS_FINGERPRINT_OPENAI_ENABLED。
+func (a *Account) isTLSFingerprintSupportedIdentity() bool {
+	if a.Type != AccountTypeOAuth && a.Type != AccountTypeSetupToken {
+		return false
+	}
+	return a.Platform == PlatformAnthropic || a.Platform == PlatformOpenAI
+}
+
 // IsTLSFingerprintEnabled 检查是否启用 TLS 指纹伪装
 // 仅适用于 Anthropic OAuth/SetupToken 类型账号
 // 启用后将模拟 Claude Code (Node.js) 客户端的 TLS 握手特征
 func (a *Account) IsTLSFingerprintEnabled() bool {
-	// 仅支持 Anthropic OAuth/SetupToken 账号
-	if !a.IsAnthropicOAuthOrSetupToken() {
+	// 支持 Anthropic 与 OpenAI/Codex 的 OAuth/SetupToken 账号；其余平台不套指纹。
+	if !a.isTLSFingerprintSupportedIdentity() {
 		return false
 	}
 	if a.Extra == nil {

@@ -419,6 +419,7 @@ type OpenAIGatewayService struct {
 	billingCacheService   *BillingCacheService
 	userGroupRateResolver *userGroupRateResolver
 	httpUpstream          HTTPUpstream
+	tlsFPProfileService   *TLSFingerprintProfileService
 	deferredService       *DeferredService
 	openAITokenProvider   *OpenAITokenProvider
 	grokTokenProvider     *GrokTokenProvider
@@ -462,6 +463,25 @@ type OpenAIGatewayService struct {
 	codexModelsManifestCache            codexModelsManifestCache
 	openaiCompatSessionResponses        sync.Map
 	openaiCompatAnthropicDigestSessions sync.Map
+}
+
+// SetTLSFingerprintResolver 注入 TLS 指纹 Profile 解析器（post-wire 钩子，避免改动构造函数
+// 签名与大量测试调用点）。未注入时 doUpstreamMaybeFingerprint 退化为原生 Do。
+func (s *OpenAIGatewayService) SetTLSFingerprintResolver(r *TLSFingerprintProfileService) {
+	s.tlsFPProfileService = r
+}
+
+// doUpstreamMaybeFingerprint 是 OpenAI 上游请求的统一出口：
+//   - 当 GATEWAY_TLS_FINGERPRINT_OPENAI_ENABLED 开、且账号已开启 TLS 指纹并解析出 Profile 时，
+//     改走 utls/fhttp 指纹 transport(DoWithTLS)——从而对 Codex 应用校准过的 rustls/reqwest 指纹。
+//   - 否则维持原生转发(Do)。默认(开关关 / 未开指纹 / resolver 未注入)即原生路径，保持 Codex 稳定。
+func (s *OpenAIGatewayService) doUpstreamMaybeFingerprint(req *http.Request, proxyURL string, account *Account) (*http.Response, error) {
+	if account != nil && s.cfg != nil && s.cfg.Gateway.TLSFingerprint.OpenAIEnabled && s.tlsFPProfileService != nil {
+		if prof := s.tlsFPProfileService.ResolveTLSProfile(account); prof != nil {
+			return s.httpUpstream.DoWithTLS(req, proxyURL, account.ID, account.Concurrency, prof)
+		}
+	}
+	return s.httpUpstream.Do(req, proxyURL, account.ID, account.Concurrency)
 }
 
 // NewOpenAIGatewayService creates a new OpenAIGatewayService
