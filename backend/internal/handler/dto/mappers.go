@@ -298,15 +298,6 @@ func AccountFromServiceShallow(a *service.Account) *Account {
 		if mode := a.GetUserMsgQueueMode(); mode != "" {
 			out.UserMsgQueueMode = &mode
 		}
-		// TLS指纹伪装开关
-		if a.IsTLSFingerprintEnabled() {
-			enabled := true
-			out.EnableTLSFingerprint = &enabled
-		}
-		// TLS指纹模板ID
-		if profileID := a.GetTLSFingerprintProfileID(); profileID > 0 {
-			out.TLSFingerprintProfileID = &profileID
-		}
 		// 会话ID伪装开关
 		if a.IsSessionIDMaskingEnabled() {
 			enabled := true
@@ -327,6 +318,16 @@ func AccountFromServiceShallow(a *service.Account) *Account {
 				out.CustomBaseURL = &customURL
 			}
 		}
+	}
+
+	// TLS 指纹伪装开关 + 模板绑定（对所有平台生效：anthropic 与 openai 等）。
+	// 从 extra 暴露到顶层,供账号编辑弹窗与"指纹与连接"运行面回显绑定状态。
+	if a.IsTLSFingerprintEnabled() {
+		enabled := true
+		out.EnableTLSFingerprint = &enabled
+	}
+	if profileID := a.GetTLSFingerprintProfileID(); profileID > 0 {
+		out.TLSFingerprintProfileID = &profileID
 	}
 
 	// 提取账号配额限制（apikey / bedrock 类型有效）
