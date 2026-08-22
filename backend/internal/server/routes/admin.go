@@ -722,6 +722,8 @@ func registerTLSFingerprintProfileRoutes(admin *gin.RouterGroup, h *handler.Hand
 		profiles.POST("", h.Admin.TLSFingerprintProfile.Create)
 		profiles.PUT("/:id", h.Admin.TLSFingerprintProfile.Update)
 		profiles.DELETE("/:id", h.Admin.TLSFingerprintProfile.Delete)
+		// 服务端指纹自校验：用真实指纹 transport 打 tls.peet.ws，回传实测 JA3/JA4/H2 与目标比对。
+		profiles.POST("/:id/verify", h.Admin.Account.VerifyProfileFingerprint)
 	}
 }
 

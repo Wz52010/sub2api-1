@@ -25,41 +25,41 @@ const (
 	AccountConnectionDiagnosticExtraKey = "connection_diagnostic"
 	diagnosticPersistTimeout            = 2 * time.Second
 	diagnosticMaxPersistedNotes         = 8
-	diagnosticMaxPersistedText           = 512
+	diagnosticMaxPersistedText          = 512
 )
 
 // AccountConnectionDiagnostic is a read-only view of the account's outbound
 // network path. It deliberately omits credentials and proxy authentication.
 type AccountConnectionDiagnostic struct {
-	AccountID             int64     `json:"account_id"`
-	Platform              string    `json:"platform"`
-	TargetHost            string    `json:"target_host"`
-	ProxyConfigured       bool      `json:"proxy_configured"`
-	ProxyID               *int64    `json:"proxy_id,omitempty"`
-	ProxyEndpoint         string    `json:"proxy_endpoint,omitempty"`
-	ProxyExitIP           string    `json:"proxy_exit_ip,omitempty"`
-	ProxyExitIPStatus     string    `json:"proxy_exit_ip_status"`
-	DNSStatus             string    `json:"dns_status"`
-	DNSAddresses          []string  `json:"dns_addresses,omitempty"`
-	TLSFingerprintEnabled bool      `json:"tls_fingerprint_enabled"`
-	TLSProfileName        string    `json:"tls_profile_name,omitempty"`
-	FingerprintKey        string    `json:"fingerprint_key,omitempty"`
-	TLSHandshake          bool      `json:"tls_handshake"`
-	TLSVersion            string    `json:"tls_version,omitempty"`
-	ALPN                  string    `json:"alpn,omitempty"`
-	HTTPProtocol          string    `json:"http_protocol,omitempty"`
-	HTTPStatus            int       `json:"http_status,omitempty"`
-	LatencyMs             int64     `json:"latency_ms,omitempty"`
-	Success               bool      `json:"success"`
-	FailureStage          string    `json:"failure_stage,omitempty"`
-	FailureMessage        string    `json:"failure_message,omitempty"`
-	Notes                 []string  `json:"notes,omitempty"`
+	AccountID             int64    `json:"account_id"`
+	Platform              string   `json:"platform"`
+	TargetHost            string   `json:"target_host"`
+	ProxyConfigured       bool     `json:"proxy_configured"`
+	ProxyID               *int64   `json:"proxy_id,omitempty"`
+	ProxyEndpoint         string   `json:"proxy_endpoint,omitempty"`
+	ProxyExitIP           string   `json:"proxy_exit_ip,omitempty"`
+	ProxyExitIPStatus     string   `json:"proxy_exit_ip_status"`
+	DNSStatus             string   `json:"dns_status"`
+	DNSAddresses          []string `json:"dns_addresses,omitempty"`
+	TLSFingerprintEnabled bool     `json:"tls_fingerprint_enabled"`
+	TLSProfileName        string   `json:"tls_profile_name,omitempty"`
+	FingerprintKey        string   `json:"fingerprint_key,omitempty"`
+	TLSHandshake          bool     `json:"tls_handshake"`
+	TLSVersion            string   `json:"tls_version,omitempty"`
+	ALPN                  string   `json:"alpn,omitempty"`
+	HTTPProtocol          string   `json:"http_protocol,omitempty"`
+	HTTPStatus            int      `json:"http_status,omitempty"`
+	LatencyMs             int64    `json:"latency_ms,omitempty"`
+	Success               bool     `json:"success"`
+	FailureStage          string   `json:"failure_stage,omitempty"`
+	FailureMessage        string   `json:"failure_message,omitempty"`
+	Notes                 []string `json:"notes,omitempty"`
 	// CoherenceStatus / CoherenceFindings 为只读的出站身份一致性评估结果:对比"被模拟的
 	// 客户端身份"与"实际协商到的协议/指纹"。完全基于已采集字段分析,不发起新请求,
 	// 也不改变任何转发行为。
-	CoherenceStatus       string                       `json:"coherence_status,omitempty"`
-	CoherenceFindings     []ConnectionCoherenceFinding `json:"coherence_findings,omitempty"`
-	CheckedAt             time.Time `json:"checked_at"`
+	CoherenceStatus   string                       `json:"coherence_status,omitempty"`
+	CoherenceFindings []ConnectionCoherenceFinding `json:"coherence_findings,omitempty"`
+	CheckedAt         time.Time                    `json:"checked_at"`
 }
 
 // ConnectionCoherenceFinding 描述一条出站身份一致性发现(只读,不影响转发路径)。
@@ -432,6 +432,31 @@ func redactDiagnosticError(err error, proxyURL string) string {
 // 客户端身份"与"实际协商到的协议/指纹",把矛盾转成可读发现写入 result。
 //
 // 它不发起任何新请求,也不修改任何出站/转发行为——仅解释既有诊断数据。
+// VerifyProfileFingerprint 用该 Profile 对应的真实指纹 transport 直连指纹回显端点(tls.peet.ws),
+// 回传实测 JA3/JA4/H2 与目标 H2 串比对。用于上线前校准确认与依赖(fhttp/utls/Go)漂移守卫。
+// 只读、诊断用途,不发起转发、不改任何出站行为。
+func (s *AccountTestService) VerifyProfileFingerprint(ctx context.Context, profileID int64) (*FingerprintProbeResult, error) {
+	if s == nil || s.httpUpstream == nil {
+		return nil, errors.New("fingerprint probe is not configured")
+	}
+	if s.tlsFPProfileService == nil {
+		return nil, errors.New("tls fingerprint profile service is not configured")
+	}
+	profile := s.tlsFPProfileService.GetProfileByID(profileID)
+	if profile == nil {
+		return nil, fmt.Errorf("tls fingerprint profile %d not found", profileID)
+	}
+	prober, ok := s.httpUpstream.(interface {
+		ProbeFingerprintAgainstEcho(ctx context.Context, profile *tlsfingerprint.Profile, echoURL string) (*FingerprintProbeResult, error)
+	})
+	if !ok {
+		return nil, errors.New("upstream transport does not support fingerprint probe")
+	}
+	pctx, cancel := context.WithTimeout(ctx, accountDiagnosticTimeout)
+	defer cancel()
+	return prober.ProbeFingerprintAgainstEcho(pctx, profile, "")
+}
+
 func evaluateConnectionCoherence(result *AccountConnectionDiagnostic) {
 	if result == nil {
 		return
@@ -511,6 +536,7 @@ const (
 	profileClientUnknown profileClientType = iota
 	profileClientNode
 	profileClientBrowser
+	profileClientRust
 )
 
 // classifyProfileClientType 依据 Profile 名称粗分客户端族,判定口径与
@@ -521,6 +547,11 @@ func classifyProfileClientType(name string) profileClientType {
 		return profileClientUnknown
 	}
 	switch {
+	// Rust(reqwest)优先于 codex/node 判定：真实 Codex CLI 为 Rust，已校准的 Codex Profile
+	// 名称含 rust/reqwest 时归为 Rust 族，避免被 "codex" 关键字误判成 Node 而触发 runtime 错配。
+	case strings.Contains(text, "rust"),
+		strings.Contains(text, "reqwest"):
+		return profileClientRust
 	case strings.Contains(text, "claude"),
 		strings.Contains(text, "codex"),
 		strings.Contains(text, "node"):

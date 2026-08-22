@@ -96,12 +96,34 @@ export async function deleteProfile(id: number): Promise<{ message: string }> {
   return data
 }
 
+export interface FingerprintProbeResult {
+  echo_url: string
+  profile_name: string
+  protocol_mode: string
+  http_version: string
+  ja3: string
+  ja3_hash: string
+  ja4: string
+  peetprint_hash: string
+  h2_akamai_fingerprint: string
+  h2_akamai_fingerprint_hash: string
+  expected_h2_akamai: string
+  h2_match: boolean
+}
+
+// verify 用该 Profile 的真实指纹 transport 打 tls.peet.ws，回传实测 JA3/JA4/H2 与目标比对（只读诊断）。
+export async function verify(id: number): Promise<FingerprintProbeResult> {
+  const { data } = await apiClient.post<FingerprintProbeResult>(`/admin/tls-fingerprint-profiles/${id}/verify`)
+  return data
+}
+
 export const tlsFingerprintProfileAPI = {
   list,
   getById,
   create,
   update,
-  delete: deleteProfile
+  delete: deleteProfile,
+  verify
 }
 
 export default tlsFingerprintProfileAPI

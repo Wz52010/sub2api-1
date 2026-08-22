@@ -117,6 +117,14 @@
               <td class="px-3 py-2">
                 <div class="flex items-center gap-1">
                   <button
+                    @click="handleVerify(profile)"
+                    :disabled="verifyingId === profile.id"
+                    class="px-1.5 py-0.5 text-xs rounded border border-gray-300 text-gray-600 hover:text-green-600 hover:border-green-400 disabled:opacity-50 dark:border-dark-500 dark:text-gray-300"
+                    title="用真实指纹 transport 打 tls.peet.ws 验证 JA3/JA4/H2"
+                  >
+                    {{ verifyingId === profile.id ? '验证中…' : '验证' }}
+                  </button>
+                  <button
                     @click="handleEdit(profile)"
                     class="p-1 text-gray-500 hover:text-primary-600 dark:hover:text-primary-400"
                     :title="t('common.edit')"
@@ -570,6 +578,24 @@ const formatNumericArray = (arr: number[] | null | undefined): string => (arr ??
 
 // For point_formats and psk_modes (uint8), show as plain numbers (null-safe)
 const formatPlainNumericArray = (arr: number[] | null | undefined): string => (arr ?? []).join(', ')
+
+const verifyingId = ref<number | null>(null)
+const handleVerify = async (profile: TLSFingerprintProfile) => {
+  verifyingId.value = profile.id
+  try {
+    const r = await adminAPI.tlsFingerprintProfiles.verify(profile.id)
+    const summary = `${r.protocol_mode} · JA3 ${r.ja3_hash} · JA4 ${r.ja4} · H2 ${r.h2_akamai_fingerprint}`
+    if (r.h2_match) {
+      appStore.showSuccess('H2 指纹匹配 ✓  ' + summary)
+    } else {
+      appStore.showError('H2 指纹不匹配 ✗ (期望 ' + r.expected_h2_akamai + ')  ' + summary)
+    }
+  } catch (error: any) {
+    appStore.showError(error.response?.data?.detail || error.response?.data?.message || '指纹验证失败')
+  } finally {
+    verifyingId.value = null
+  }
+}
 
 const handleEdit = (profile: TLSFingerprintProfile) => {
   editingProfile.value = profile

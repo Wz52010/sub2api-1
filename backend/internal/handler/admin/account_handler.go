@@ -65,7 +65,7 @@ type AccountHandler struct {
 	grokImportProber        grokImportProber
 	upstreamBillingProbe    *service.UpstreamBillingProbeService
 	ollamaCloudUsage        *service.OllamaCloudUsageService
-	httpUpstream             service.HTTPUpstream
+	httpUpstream            service.HTTPUpstream
 }
 
 // SetUpstreamBillingProbeService attaches the optional remote billing probe service.
@@ -1152,6 +1152,28 @@ func (h *AccountHandler) DiagnoseConnection(c *gin.Context) {
 	}
 
 	result, err := h.accountTestService.DiagnoseAccountConnection(c.Request.Context(), accountID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
+// VerifyProfileFingerprint drives the profile's real fingerprint transport against a
+// fingerprint-echo endpoint (tls.peet.ws) and returns the observed JA3/JA4/HTTP2 plus the
+// profile's target H2 string for byte-level comparison. Read-only calibration / drift guard.
+// POST /api/v1/admin/tls-fingerprint-profiles/:id/verify
+func (h *AccountHandler) VerifyProfileFingerprint(c *gin.Context) {
+	profileID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "Invalid profile ID")
+		return
+	}
+	if h.accountTestService == nil {
+		response.ErrorFrom(c, errors.New("fingerprint probe is not configured"))
+		return
+	}
+	result, err := h.accountTestService.VerifyProfileFingerprint(c.Request.Context(), profileID)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
