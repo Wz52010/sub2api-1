@@ -100,6 +100,10 @@ func (p *TLSFingerprintProfile) BuildMetadata() TLSFingerprintProfileMetadata {
 	text := strings.ToLower(strings.TrimSpace(strings.Join([]string{p.Name, valueOrEmpty(p.Description)}, " ")))
 	clientType := "Custom"
 	switch {
+	// Rust(reqwest)优先于 node 判定:Codex CLI 为 Rust 客户端,已校准的 Codex Profile
+	// 名称/描述可能残留 "node" 文案,若不先判 rust 会被误标成 "Node.js / Claude Code"。
+	case strings.Contains(text, "rust") || strings.Contains(text, "reqwest"):
+		clientType = "Codex CLI / Rust (reqwest)"
 	case strings.Contains(text, "claude") || strings.Contains(text, "node"):
 		clientType = "Node.js / Claude Code"
 	case strings.Contains(text, "chrome"):

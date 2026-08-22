@@ -485,6 +485,16 @@ func evaluateConnectionCoherence(result *AccountConnectionDiagnostic) {
 		})
 	}
 
+	// 2b) OpenAI/Codex 账号绑定 Rust(reqwest)指纹 —— 与真实 Codex CLI 运行时一致(正向确认)。
+	if result.Platform == PlatformOpenAI && result.TLSFingerprintEnabled &&
+		classifyProfileClientType(result.TLSProfileName) == profileClientRust {
+		findings = append(findings, ConnectionCoherenceFinding{
+			Code:     "codex_rust_ok",
+			Severity: coherenceSeverityInfo,
+			Message:  "OpenAI/Codex 账号使用 Rust(reqwest)指纹,与真实 Codex CLI 运行时一致。",
+		})
+	}
+
 	// 3) 模拟 Node/Claude Code 却协商到 HTTP/1.1 —— 协议维度不一致(当前最主要的缺口)。
 	if result.TLSFingerprintEnabled && nodeLikeProfile && result.Success {
 		switch diagnosticNegotiatedHTTPMajor(result) {

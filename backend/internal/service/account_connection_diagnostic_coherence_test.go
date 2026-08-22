@@ -87,6 +87,19 @@ func TestEvaluateConnectionCoherence(t *testing.T) {
 			wantCodes:    []string{"codex_runtime_mismatch", "openai_probe_path_note"},
 			notWantCodes: []string{"protocol_h1_vs_node_client", "protocol_h2_ok"},
 		},
+		{
+			name: "openai account with rust profile -> coherent, no mismatch",
+			result: &AccountConnectionDiagnostic{
+				Platform:              PlatformOpenAI,
+				TLSFingerprintEnabled: true,
+				TLSProfileName:        "Codex CLI - Rust (reqwest)",
+				Success:               true,
+				HTTPProtocol:          "HTTP/2.0",
+			},
+			wantStatus:   coherenceStatusCoherent,
+			wantCodes:    []string{"codex_rust_ok", "openai_probe_path_note"},
+			notWantCodes: []string{"codex_runtime_mismatch", "protocol_h1_vs_node_client"},
+		},
 	}
 
 	for _, tc := range tests {
