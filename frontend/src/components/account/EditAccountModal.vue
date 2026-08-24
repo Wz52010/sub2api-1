@@ -4917,6 +4917,26 @@ const handleSubmit = async () => {
       updatePayload.extra = newExtra
     }
 
+    // TLS 指纹保存(OpenAI/Codex OAuth/SetupToken)。
+    // 修复:上面的 anthropic 块会持久化指纹,但 OpenAI extra 块漏了,导致 openai/codex 账号
+    // 保存指纹时被静默丢弃(UI 能显示、能选,却存不进 extra)。此处补齐,语义与 anthropic 块一致。
+    if (props.account.platform === 'openai' && (props.account.type === 'oauth' || props.account.type === 'setup-token')) {
+      const currentExtra = (updatePayload.extra as Record<string, unknown>) || (props.account.extra as Record<string, unknown>) || {}
+      const newExtra: Record<string, unknown> = { ...currentExtra }
+      if (tlsFingerprintEnabled.value) {
+        newExtra.enable_tls_fingerprint = true
+        if (tlsFingerprintProfileId.value) {
+          newExtra.tls_fingerprint_profile_id = tlsFingerprintProfileId.value
+        } else {
+          delete newExtra.tls_fingerprint_profile_id
+        }
+      } else {
+        delete newExtra.enable_tls_fingerprint
+        delete newExtra.tls_fingerprint_profile_id
+      }
+      updatePayload.extra = newExtra
+    }
+
     // For apikey/bedrock accounts, handle quota_limit in extra
     if (props.account.type === 'apikey' || props.account.type === 'bedrock') {
       const currentExtra = (updatePayload.extra as Record<string, unknown>) ||
