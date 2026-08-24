@@ -20,7 +20,7 @@ func TestEvaluateConnectionCoherence(t *testing.T) {
 		notWantCodes []string
 	}{
 		{
-			name: "anthropic node profile negotiated h1 -> protocol warning",
+			name: "anthropic node profile h1 -> coherent (undici is h1)",
 			result: &AccountConnectionDiagnostic{
 				Platform:              PlatformAnthropic,
 				TLSFingerprintEnabled: true,
@@ -29,12 +29,12 @@ func TestEvaluateConnectionCoherence(t *testing.T) {
 				HTTPProtocol:          "HTTP/1.1",
 				ALPN:                  "http/1.1",
 			},
-			wantStatus:   coherenceStatusWarning,
-			wantCodes:    []string{"protocol_h1_vs_node_client"},
-			notWantCodes: []string{"protocol_h2_ok", "codex_runtime_mismatch"},
+			wantStatus:   coherenceStatusCoherent,
+			wantCodes:    []string{"protocol_h1_node_ok"},
+			notWantCodes: []string{"protocol_h2_vs_node_client", "codex_runtime_mismatch"},
 		},
 		{
-			name: "anthropic node profile negotiated h2 -> coherent",
+			name: "anthropic node profile h2 -> warning (undici is not h2)",
 			result: &AccountConnectionDiagnostic{
 				Platform:              PlatformAnthropic,
 				TLSFingerprintEnabled: true,
@@ -43,9 +43,9 @@ func TestEvaluateConnectionCoherence(t *testing.T) {
 				HTTPProtocol:          "HTTP/2.0",
 				ALPN:                  "h2",
 			},
-			wantStatus:   coherenceStatusCoherent,
-			wantCodes:    []string{"protocol_h2_ok"},
-			notWantCodes: []string{"protocol_h1_vs_node_client", "codex_runtime_mismatch"},
+			wantStatus:   coherenceStatusWarning,
+			wantCodes:    []string{"protocol_h2_vs_node_client"},
+			notWantCodes: []string{"protocol_h1_node_ok", "codex_runtime_mismatch"},
 		},
 		{
 			name: "openai account with node profile on h1 -> codex mismatch + protocol + path note",
@@ -59,7 +59,7 @@ func TestEvaluateConnectionCoherence(t *testing.T) {
 			wantStatus: coherenceStatusWarning,
 			wantCodes: []string{
 				"codex_runtime_mismatch",
-				"protocol_h1_vs_node_client",
+				"protocol_h1_node_ok",
 				"openai_probe_path_note",
 			},
 		},
@@ -73,7 +73,7 @@ func TestEvaluateConnectionCoherence(t *testing.T) {
 			},
 			wantStatus:   coherenceStatusCoherent,
 			wantCodes:    []string{"tls_fingerprint_disabled"},
-			notWantCodes: []string{"protocol_h1_vs_node_client", "protocol_h2_ok", "codex_runtime_mismatch"},
+			notWantCodes: []string{"protocol_h1_node_ok", "protocol_h2_vs_node_client", "codex_runtime_mismatch"},
 		},
 		{
 			name: "failed probe still yields config-level findings",
@@ -85,7 +85,7 @@ func TestEvaluateConnectionCoherence(t *testing.T) {
 			},
 			wantStatus:   coherenceStatusWarning,
 			wantCodes:    []string{"codex_runtime_mismatch", "openai_probe_path_note"},
-			notWantCodes: []string{"protocol_h1_vs_node_client", "protocol_h2_ok"},
+			notWantCodes: []string{"protocol_h1_node_ok", "protocol_h2_vs_node_client"},
 		},
 		{
 			name: "openai account with rust profile -> coherent, no mismatch",
@@ -97,8 +97,8 @@ func TestEvaluateConnectionCoherence(t *testing.T) {
 				HTTPProtocol:          "HTTP/2.0",
 			},
 			wantStatus:   coherenceStatusCoherent,
-			wantCodes:    []string{"codex_rust_ok", "openai_probe_path_note"},
-			notWantCodes: []string{"codex_runtime_mismatch", "protocol_h1_vs_node_client"},
+			wantCodes:    []string{"codex_rust_ok", "openai_probe_path_note", "protocol_h2_rust_ok"},
+			notWantCodes: []string{"codex_runtime_mismatch", "protocol_h1_vs_rust_client"},
 		},
 	}
 

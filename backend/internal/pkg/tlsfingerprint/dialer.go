@@ -45,6 +45,13 @@ type Profile struct {
 	// ShuffleExtensions 为 true 时每次握手随机打乱扩展顺序（模拟 rustls/reqwest：JA3 每连接变化，
 	// JA4 因对扩展排序不受影响）。默认 false 保持固定顺序（undici/Node 等不随机化的客户端）。
 	ShuffleExtensions bool
+
+	// ClientOS / ClientArch 是可选的出站身份提示（不影响 TLS ClientHello / JA3，也不进 FingerprintKey）。
+	// 由 model 层从 Profile 名称/描述解析（macOS/Windows/Linux、arm64/x64）。当 gateway.tls_fingerprint
+	// .identity_os_sync 开启时，用于把出站 X-Stainless-OS / X-Stainless-Arch 联动成本 Profile 的目标系统，
+	// 使 "macOS 用户 / Windows 用户" 在 TLS 与 header 两层一致。为空表示不联动。
+	ClientOS   string
+	ClientArch string
 }
 
 // FingerprintKey returns a stable, non-sensitive key for the effective TLS

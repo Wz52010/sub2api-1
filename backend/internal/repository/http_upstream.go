@@ -289,6 +289,9 @@ func (s *httpUpstreamService) DoWithTLS(req *http.Request, proxyURL string, acco
 		return s.Do(req, proxyURL, accountID, accountConcurrency)
 	}
 	applyGrokCLIProxyHeaders(req)
+	if s.cfg != nil && s.cfg.Gateway.TLSFingerprint.IdentityOSSync {
+		applyProfileClientIdentityHeaders(req, profile)
+	}
 	upstreamProfile := service.HTTPUpstreamProfileDefault
 	if req != nil {
 		upstreamProfile = service.HTTPUpstreamProfileFromContext(req.Context())
@@ -568,6 +571,24 @@ func applyGrokCLIProxyHeaders(req *http.Request) {
 	req.Header.Set("x-grok-client-version", version)
 	req.Header.Set("x-grok-client-identifier", xai.CLIClientIdentifier)
 	req.Header.Set("User-Agent", xai.CLIUserAgent(version))
+}
+
+// applyProfileClientIdentityHeaders 让出站身份的 OS/Arch 头与账号绑定的 TLS Profile 联动:
+// 当 Profile 带 ClientOS(由名称/描述解析,如 macOS arm64 / Windows x64)时,把 X-Stainless-OS /
+// X-Stainless-Arch 覆写成该系统,使 TLS 指纹与 Anthropic SDK 头两层的系统身份一致。
+// 只覆写"请求本身已带 X-Stainless-OS"的 Anthropic 风格请求,不给未携带该头的请求(如 Codex/OpenAI)新增。
+// 由 gateway.tls_fingerprint.identity_os_sync 门控;为空 ClientOS 或无该头时不动。
+func applyProfileClientIdentityHeaders(req *http.Request, profile *tlsfingerprint.Profile) {
+	if req == nil || profile == nil || profile.ClientOS == "" || req.Header == nil {
+		return
+	}
+	if req.Header.Get("X-Stainless-OS") == "" {
+		return
+	}
+	req.Header.Set("X-Stainless-OS", profile.ClientOS)
+	if profile.ClientArch != "" {
+		req.Header.Set("X-Stainless-Arch", profile.ClientArch)
+	}
 }
 
 func isSupportedGrokCLIVersion(version string) bool {

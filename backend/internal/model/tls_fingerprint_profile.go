@@ -63,6 +63,7 @@ func (p *TLSFingerprintProfile) Validate() error {
 // ToTLSProfile 将领域模型转换为运行时使用的 tlsfingerprint.Profile
 // 空切片字段会在 dialer 中 fallback 到内置默认值
 func (p *TLSFingerprintProfile) ToTLSProfile() *tlsfingerprint.Profile {
+	clientOS, clientArch := parseClientOSArch(strings.ToLower(p.Name + " " + valueOrEmpty(p.Description)))
 	return &tlsfingerprint.Profile{
 		Name:                p.Name,
 		EnableGREASE:        p.EnableGREASE,
@@ -80,7 +81,32 @@ func (p *TLSFingerprintProfile) ToTLSProfile() *tlsfingerprint.Profile {
 		H2PseudoHeaderOrder: p.H2PseudoHeaderOrder,
 		H2HeaderOrder:       p.H2HeaderOrder,
 		ShuffleExtensions:   p.ShuffleExtensions,
+		ClientOS:            clientOS,
+		ClientArch:          clientArch,
 	}
+}
+
+// parseClientOSArch 从 Profile 名称/描述解析目标系统与架构,输出 Anthropic SDK(stainless)所用取值:
+// OS "MacOS"/"Windows"/"Linux";Arch "arm64"/"x64"。无法判定返回空串(表示不联动 OS 头)。
+// text 应为已 ToLower 的 "名称 + 描述"。
+func parseClientOSArch(text string) (clientOS string, clientArch string) {
+	switch {
+	case strings.Contains(text, "macos"), strings.Contains(text, "mac os"),
+		strings.Contains(text, "darwin"), strings.Contains(text, "osx"):
+		clientOS = "MacOS"
+	case strings.Contains(text, "windows"), strings.Contains(text, "win32"), strings.Contains(text, "win64"):
+		clientOS = "Windows"
+	case strings.Contains(text, "linux"):
+		clientOS = "Linux"
+	}
+	switch {
+	case strings.Contains(text, "arm64"), strings.Contains(text, "aarch64"):
+		clientArch = "arm64"
+	case strings.Contains(text, "x64"), strings.Contains(text, "x86_64"),
+		strings.Contains(text, "amd64"), strings.Contains(text, "x86-64"):
+		clientArch = "x64"
+	}
+	return clientOS, clientArch
 }
 
 // BuildMetadata derives display-only compatibility information from the

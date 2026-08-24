@@ -1342,6 +1342,11 @@ type TLSFingerprintConfig struct {
 	// utls/fhttp 指纹 transport(DoWithTLS)。默认 false，保持 OpenAI 原生路径稳定；仅对
 	// 显式开启指纹并绑定 Profile 的账号生效；关闭即全部回退原生路径，可即时回滚。
 	OpenAIEnabled bool `mapstructure:"openai_enabled"`
+	// IdentityOSSync: 是否让出站 X-Stainless-OS / X-Stainless-Arch 随账号绑定的 TLS Profile 的目标系统联动。
+	// 默认 false（出站头保持 claude.DefaultHeaders 的固定值）。开启后仅对「已启用指纹且绑定了含 OS 标识
+	// （如 macOS arm64 / Windows x64）的 Profile」、且请求本身已带 X-Stainless-OS 的 Anthropic 风格请求生效，
+	// 使 TLS 与 header 两层的系统身份一致（支撑「Mac 用户 / Windows 用户」多样化）。关闭即回退，可即时回滚。
+	IdentityOSSync bool `mapstructure:"identity_os_sync"`
 	// Profiles: 预定义的TLS指纹配置模板
 	// key 为模板名称，如 "claude_cli_v2", "chrome_120" 等
 	Profiles map[string]TLSProfileConfig `mapstructure:"profiles"`
@@ -2453,6 +2458,9 @@ func setDefaults() {
 	// OpenAI/Codex 走指纹链路开关：默认关闭，保持原生转发路径。env
 	// GATEWAY_TLS_FINGERPRINT_OPENAI_ENABLED 可覆盖。
 	viper.SetDefault("gateway.tls_fingerprint.openai_enabled", false)
+	// 出站 X-Stainless-OS/Arch 随 Profile 目标系统联动：默认关闭。注册默认值后 AutomaticEnv 才能通过
+	// GATEWAY_TLS_FINGERPRINT_IDENTITY_OS_SYNC 覆盖。
+	viper.SetDefault("gateway.tls_fingerprint.identity_os_sync", false)
 	viper.SetDefault("concurrency.ping_interval", 10)
 
 	// TokenRefresh

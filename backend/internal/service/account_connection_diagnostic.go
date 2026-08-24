@@ -463,7 +463,9 @@ func evaluateConnectionCoherence(result *AccountConnectionDiagnostic) {
 	}
 
 	findings := make([]ConnectionCoherenceFinding, 0, 4)
-	nodeLikeProfile := classifyProfileClientType(result.TLSProfileName) == profileClientNode
+	profileClient := classifyProfileClientType(result.TLSProfileName)
+	nodeLikeProfile := profileClient == profileClientNode
+	rustLikeProfile := profileClient == profileClientRust
 
 	// 1) 未启用 TLS 指纹:出站 ClientHello 使用 Go 运行时默认特征(非模拟客户端)。
 	if !result.TLSFingerprintEnabled {
@@ -495,21 +497,35 @@ func evaluateConnectionCoherence(result *AccountConnectionDiagnostic) {
 		})
 	}
 
-	// 3) 模拟 Node/Claude Code 却协商到 HTTP/1.1 —— 协议维度不一致(当前最主要的缺口)。
-	if result.TLSFingerprintEnabled && nodeLikeProfile && result.Success {
-		switch diagnosticNegotiatedHTTPMajor(result) {
-		case 1:
+	// 3) 协议维度一致性:真实 Node/Claude Code(undici)走 HTTP/1.1;Codex/Rust(reqwest)走 HTTP/2。
+	//    据此判定协商到的协议是否与被模拟客户端相符(此前把 "Node 走 h1" 误报为缺口,已纠正)。
+	if result.TLSFingerprintEnabled && result.Success {
+		switch major := diagnosticNegotiatedHTTPMajor(result); {
+		case nodeLikeProfile && major == 1:
 			findings = append(findings, ConnectionCoherenceFinding{
-				Code:       "protocol_h1_vs_node_client",
-				Severity:   coherenceSeverityWarning,
-				Message:    "TLS 指纹模拟 Node.js / Claude Code(真实客户端使用 HTTP/2),但本次连接协商为 HTTP/1.1,协议维度与被模拟客户端不一致。",
-				Suggestion: "指纹 transport 当前未启用 HTTP/2(种子 Profile 的 ALPN 为 http/1.1,且 fingerprint transport 关闭了 ForceAttemptHTTP2)。要做到协议一致需推进 H2 方案。",
-			})
-		case 2:
-			findings = append(findings, ConnectionCoherenceFinding{
-				Code:     "protocol_h2_ok",
+				Code:     "protocol_h1_node_ok",
 				Severity: coherenceSeverityInfo,
-				Message:  "TLS 指纹模拟 Node / Claude Code,且本次连接协商为 HTTP/2,协议维度一致。",
+				Message:  "TLS 指纹模拟 Node / Claude Code(undici),本次协商为 HTTP/1.1,与真实客户端一致。",
+			})
+		case nodeLikeProfile && major == 2:
+			findings = append(findings, ConnectionCoherenceFinding{
+				Code:       "protocol_h2_vs_node_client",
+				Severity:   coherenceSeverityWarning,
+				Message:    "TLS 指纹模拟 Node / Claude Code,但本次协商为 HTTP/2;而真实 Node fetch(undici)只用 HTTP/1.1,协议维度不一致。",
+				Suggestion: "把该 Profile 的 ALPN 设为仅 http/1.1(undici 不提供 h2);无需为 Claude 启用 H2。",
+			})
+		case rustLikeProfile && major == 2:
+			findings = append(findings, ConnectionCoherenceFinding{
+				Code:     "protocol_h2_rust_ok",
+				Severity: coherenceSeverityInfo,
+				Message:  "TLS 指纹模拟 Codex / Rust(reqwest),本次协商为 HTTP/2,与真实客户端一致。",
+			})
+		case rustLikeProfile && major == 1:
+			findings = append(findings, ConnectionCoherenceFinding{
+				Code:       "protocol_h1_vs_rust_client",
+				Severity:   coherenceSeverityWarning,
+				Message:    "TLS 指纹模拟 Codex / Rust(reqwest,真实走 HTTP/2),但本次协商为 HTTP/1.1,协议维度不一致。",
+				Suggestion: "确认 gateway.tls_fingerprint.http2_enabled 已开、该 Profile 的 ALPN 含 h2,且代理支持 h2(否则会回退 h1)。",
 			})
 		}
 	}
