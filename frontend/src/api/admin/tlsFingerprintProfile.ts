@@ -109,6 +109,9 @@ export interface FingerprintProbeResult {
   h2_akamai_fingerprint_hash: string
   expected_h2_akamai: string
   h2_match: boolean
+  // false 表示该模板是 h1-only 客户端(Node/undici,真实 Claude Code),H2 维度不适用,
+  // 验证以 TLS 层(JA3/JA4)为准;true 表示真正走 H2(如 Codex Rust),才比对 Akamai。
+  h2_applicable: boolean
 }
 
 // verify 用该 Profile 的真实指纹 transport 打 tls.peet.ws，回传实测 JA3/JA4/H2 与目标比对（只读诊断）。

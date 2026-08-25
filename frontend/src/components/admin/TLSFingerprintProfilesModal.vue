@@ -584,11 +584,15 @@ const handleVerify = async (profile: TLSFingerprintProfile) => {
   verifyingId.value = profile.id
   try {
     const r = await adminAPI.tlsFingerprintProfiles.verify(profile.id)
-    const summary = `${r.protocol_mode} · JA3 ${r.ja3_hash} · JA4 ${r.ja4} · H2 ${r.h2_akamai_fingerprint}`
-    if (r.h2_match) {
-      appStore.showSuccess('H2 指纹匹配 ✓  ' + summary)
+    const tlsSummary = `${r.http_version || r.protocol_mode} · JA3 ${r.ja3_hash} · JA4 ${r.ja4}`
+    if (r.h2_applicable === false) {
+      // h1-only 模板(Node/undici,真实 Claude Code):不走 H2,H2 维度不适用,
+      // 以 TLS 握手成功 + 实测 JA3/JA4 为准。对照你抓包的真实 JA4 即可确认。
+      appStore.showSuccess('指纹验证成功 ✓ (HTTP/1.1 客户端,H2 不适用)  ' + tlsSummary)
+    } else if (r.h2_match) {
+      appStore.showSuccess('H2 指纹匹配 ✓  ' + tlsSummary + ` · H2 ${r.h2_akamai_fingerprint}`)
     } else {
-      appStore.showError('H2 指纹不匹配 ✗ (期望 ' + r.expected_h2_akamai + ')  ' + summary)
+      appStore.showError('H2 指纹不匹配 ✗ (期望 ' + r.expected_h2_akamai + ')  ' + tlsSummary + ` · H2 ${r.h2_akamai_fingerprint}`)
     }
   } catch (error: any) {
     appStore.showError(error.response?.data?.detail || error.response?.data?.message || '指纹验证失败')

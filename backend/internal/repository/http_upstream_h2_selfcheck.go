@@ -72,7 +72,15 @@ func (s *httpUpstreamService) ProbeFingerprintAgainstEcho(ctx context.Context, p
 	if err := json.Unmarshal(body, &pr); err != nil {
 		return nil, fmt.Errorf("decode echo json: %w (body=%.160s)", err, string(body))
 	}
-	expected := ExpectedProfileH2Akamai(profile)
+	// H2 维度仅在本次探测真正走 H2 时才有意义。h1-only 模板(Node/undici,真实 Claude Code)
+	// 的 buildProbeRoundTripper 会退回 default(h1)transport,tls.peet.ws 在 h1 下不回显
+	// akamai_fingerprint;若仍拿内置 undici 种子当"期望"去比,必然误报"H2 指纹不匹配"。
+	// 故:非 H2 模式下 H2 不适用,expected 置空、H2Match 不作失败判定,验证以 TLS(JA3/JA4)为准。
+	h2Applicable := protoMode != upstreamProtocolModeDefault
+	expected := ""
+	if h2Applicable {
+		expected = ExpectedProfileH2Akamai(profile)
+	}
 	name := ""
 	if profile != nil {
 		name = profile.Name
@@ -89,7 +97,8 @@ func (s *httpUpstreamService) ProbeFingerprintAgainstEcho(ctx context.Context, p
 		H2Akamai:         pr.HTTP2.AkamaiFingerprint,
 		H2AkamaiHash:     pr.HTTP2.AkamaiFingerprintHash,
 		ExpectedH2Akamai: expected,
-		H2Match:          expected != "" && pr.HTTP2.AkamaiFingerprint == expected,
+		H2Match:          h2Applicable && expected != "" && pr.HTTP2.AkamaiFingerprint == expected,
+		H2Applicable:     h2Applicable,
 	}, nil
 }
 

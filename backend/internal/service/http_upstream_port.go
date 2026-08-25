@@ -39,6 +39,10 @@ type FingerprintProbeResult struct {
 	H2AkamaiHash     string `json:"h2_akamai_fingerprint_hash"`
 	ExpectedH2Akamai string `json:"expected_h2_akamai"`
 	H2Match          bool   `json:"h2_match"`
+	// H2Applicable 表示本次探测是否真正走 H2(即模板 ALPN 提供 h2 且开启了 H2 指纹)。
+	// 为 false 时该 Profile 是 h1-only 客户端(如 Node/undici,真实 Claude Code),
+	// H2 维度不适用——此时不应把 H2Match=false 当作失败,验证以 TLS 层(JA3/JA4)为准。
+	H2Applicable bool `json:"h2_applicable"`
 }
 
 // HTTPUpstreamHealth is an optional read-only capability implemented by the
