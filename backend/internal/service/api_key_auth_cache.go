@@ -84,6 +84,11 @@ type APIKeyAuthGroupSnapshot struct {
 	AudioRealtimePricePerMin        *float64                      `json:"audio_realtime_price_per_min,omitempty"`
 	AudioTTSPricePerMillionChars    *float64                      `json:"audio_tts_price_per_million_chars,omitempty"`
 	AudioSTTPricePerHour            *float64                      `json:"audio_stt_price_per_hour,omitempty"`
+	// 长上下文计费开关 + 分组模型定价覆盖：必须随快照缓存,否则计费热路径拿到的
+	// apiKey.Group 缺这两个字段 → longContextPricingEnabled=false / 分组价失效,
+	// 导致 >阈值 长上下文请求不翻倍(官方修复 674570ca1 "preserve group pricing in auth snapshots")。
+	LongContextPricingEnabled       bool                          `json:"long_context_pricing_enabled"`
+	ModelPricing                    []ChannelModelPricing         `json:"model_pricing,omitempty"`
 	ClaudeCodeOnly                  bool                          `json:"claude_code_only"`
 	FallbackGroupID                 *int64                        `json:"fallback_group_id,omitempty"`
 	FallbackGroupIDOnInvalidRequest *int64                        `json:"fallback_group_id_on_invalid_request,omitempty"`
