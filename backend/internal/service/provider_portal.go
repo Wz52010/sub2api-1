@@ -36,6 +36,28 @@ type ProviderAccount struct {
 	UpdatedAt       time.Time
 }
 
+// ProviderOwnedAccount 供货商可见的账号实况(隔离视图:只含可用性/时间,不含金额/凭据)。
+type ProviderOwnedAccount struct {
+	ID               int64      `json:"id"`
+	Name             string     `json:"name"`
+	Platform         string     `json:"platform"`
+	Type             string     `json:"type"`
+	Status           string     `json:"status"`
+	ErrorMessage     string     `json:"error_message,omitempty"`
+	LastUsedAt       *time.Time `json:"last_used_at,omitempty"`
+	RateLimitedAt    *time.Time `json:"rate_limited_at,omitempty"`
+	RateLimitResetAt *time.Time `json:"rate_limit_reset_at,omitempty"`
+	ExpiresAt        *time.Time `json:"expires_at,omitempty"`
+	CreatedAt        time.Time  `json:"created_at"`
+}
+
+// ProviderAccountUsage 供货商可见的用量汇总(仅 token/请求数,不含成本/售价)。
+type ProviderAccountUsage struct {
+	Requests     int64 `json:"requests"`
+	InputTokens  int64 `json:"input_tokens"`
+	OutputTokens int64 `json:"output_tokens"`
+}
+
 // ProviderRepository 供货商身份持久化(裸 SQL 实现,避开 ent codegen)。
 type ProviderRepository interface {
 	Create(ctx context.Context, p *ProviderAccount) (int64, error)
@@ -47,6 +69,12 @@ type ProviderRepository interface {
 	Delete(ctx context.Context, id int64) error
 	// CountAccountsAddedSince 统计该供货商名下、created_at 晚于 since 的上游账号数(每日新增限流用)。
 	CountAccountsAddedSince(ctx context.Context, providerID int64, since time.Time) (int, error)
+	// ListOwnedAccounts 列出该供货商名下(Extra.provider_id)的上游账号实况。
+	ListOwnedAccounts(ctx context.Context, providerID int64) ([]*ProviderOwnedAccount, error)
+	// AccountOwnedBy 校验某账号是否归属该供货商(越权防护)。
+	AccountOwnedBy(ctx context.Context, providerID, accountID int64) (bool, error)
+	// AccountUsageSince 汇总该账号自 since 起的 token/请求数。
+	AccountUsageSince(ctx context.Context, providerID, accountID int64, since time.Time) (*ProviderAccountUsage, error)
 }
 
 // providerClaims 供货商登录 JWT。typ=provider 使其无法被 user/admin 路由复用,反之亦然。
@@ -212,4 +240,19 @@ func (s *ProviderPortalService) GroupAllowed(p *ProviderAccount, groupID int64) 
 		}
 	}
 	return false
+}
+
+// ListOwnedAccounts 该供货商名下账号实况。
+func (s *ProviderPortalService) ListOwnedAccounts(ctx context.Context, providerID int64) ([]*ProviderOwnedAccount, error) {
+	return s.repo.ListOwnedAccounts(ctx, providerID)
+}
+
+// AccountOwnedBy 越权校验:账号是否属于该供货商。
+func (s *ProviderPortalService) AccountOwnedBy(ctx context.Context, providerID, accountID int64) (bool, error) {
+	return s.repo.AccountOwnedBy(ctx, providerID, accountID)
+}
+
+// AccountUsageSince 账号 token/请求用量汇总(不含金额)。
+func (s *ProviderPortalService) AccountUsageSince(ctx context.Context, providerID, accountID int64, since time.Time) (*ProviderAccountUsage, error) {
+	return s.repo.AccountUsageSince(ctx, providerID, accountID, since)
 }

@@ -109,3 +109,61 @@ func (r *providerRepository) CountAccountsAddedSince(ctx context.Context, provid
 	).Scan(&n)
 	return n, err
 }
+
+// ListOwnedAccounts 列出该供货商(Extra.provider_id)名下账号实况。
+func (r *providerRepository) ListOwnedAccounts(ctx context.Context, providerID int64) ([]*service.ProviderOwnedAccount, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT id, COALESCE(name,''), COALESCE(platform,''), COALESCE(type,''), COALESCE(status,''),
+		        COALESCE(error_message,''), last_used_at, rate_limited_at, rate_limit_reset_at, expires_at, created_at
+		 FROM accounts WHERE (extra->>'provider_id')::bigint = $1 ORDER BY id DESC`, providerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*service.ProviderOwnedAccount
+	for rows.Next() {
+		var (
+			a                                              service.ProviderOwnedAccount
+			lastUsed, rlAt, rlReset, expires               sql.NullTime
+		)
+		if err := rows.Scan(&a.ID, &a.Name, &a.Platform, &a.Type, &a.Status, &a.ErrorMessage,
+			&lastUsed, &rlAt, &rlReset, &expires, &a.CreatedAt); err != nil {
+			return nil, err
+		}
+		if lastUsed.Valid {
+			a.LastUsedAt = &lastUsed.Time
+		}
+		if rlAt.Valid {
+			a.RateLimitedAt = &rlAt.Time
+		}
+		if rlReset.Valid {
+			a.RateLimitResetAt = &rlReset.Time
+		}
+		if expires.Valid {
+			a.ExpiresAt = &expires.Time
+		}
+		out = append(out, &a)
+	}
+	return out, rows.Err()
+}
+
+// AccountOwnedBy 校验账号是否属于该供货商(越权防护)。
+func (r *providerRepository) AccountOwnedBy(ctx context.Context, providerID, accountID int64) (bool, error) {
+	var n int
+	err := r.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM accounts WHERE id=$1 AND (extra->>'provider_id')::bigint = $2`,
+		accountID, providerID,
+	).Scan(&n)
+	return n > 0, err
+}
+
+// AccountUsageSince 汇总该账号自 since 起的 token/请求数(仅 token,不含金额)。
+func (r *providerRepository) AccountUsageSince(ctx context.Context, providerID, accountID int64, since time.Time) (*service.ProviderAccountUsage, error) {
+	var u service.ProviderAccountUsage
+	err := r.db.QueryRowContext(ctx,
+		`SELECT COUNT(*), COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0)
+		 FROM usage_logs WHERE account_id=$1 AND created_at >= $2`,
+		accountID, since,
+	).Scan(&u.Requests, &u.InputTokens, &u.OutputTokens)
+	return &u, err
+}

@@ -192,6 +192,7 @@ func ProvideHandlers(
 	batchImageHandler *BatchImageHandler,
 	_ *service.IdempotencyCoordinator,
 	_ *service.IdempotencyCleanupService,
+	providerHandler *ProviderHandler,
 ) *Handlers {
 	return &Handlers{
 		Auth:             authHandler,
@@ -215,6 +216,7 @@ func ProvideHandlers(
 		ModelPlaza:       modelPlazaHandler,
 		AsyncImage:       asyncImageHandler,
 		BatchImage:       batchImageHandler,
+		Provider:         providerHandler,
 	}
 }
 
