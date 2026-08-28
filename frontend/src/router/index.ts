@@ -5,6 +5,7 @@
 
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useProviderStore } from '@/stores/provider'
 import { useAppStore } from '@/stores/app'
 import { useAdminSettingsStore } from '@/stores/adminSettings'
 import { useAdminComplianceStore } from '@/stores/adminCompliance'
@@ -26,6 +27,35 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: false,
       title: 'Setup'
+    }
+  },
+
+  // ==================== Provider Portal (供货商门户) ====================
+  {
+    path: '/provider/login',
+    name: 'ProviderLogin',
+    component: () => import('@/views/provider/ProviderLoginView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: '供货商登录'
+    }
+  },
+  {
+    path: '/provider',
+    name: 'ProviderDashboard',
+    component: () => import('@/views/provider/ProviderDashboardView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: '供货商门户'
+    },
+    beforeEnter: (_to, _from, next) => {
+      const providerStore = useProviderStore()
+      providerStore.restore()
+      if (!providerStore.isAuthenticated) {
+        next('/provider/login')
+        return
+      }
+      next()
     }
   },
 
