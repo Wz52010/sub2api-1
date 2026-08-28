@@ -400,7 +400,10 @@ type PublicSettings struct {
 	SoraClientEnabled                   bool                     `json:"sora_client_enabled"`
 	BackendModeEnabled                  bool                     `json:"backend_mode_enabled"`
 	PaymentEnabled                      bool                     `json:"payment_enabled"`
-	Version                             string                   `json:"version"`
+	// VendorMode: 号商模式(供货商专用实例)。前端据此把管理面菜单裁到六个模块。
+	// 真正的权限裁剪在服务端(VendorModeAdminGuard),此字段只用于隐藏入口。
+	VendorMode bool   `json:"vendor_mode"`
+	Version    string `json:"version"`
 	// 服务器全局时区（IANA 名称与当前 UTC 偏移，如 "Asia/Shanghai" / "+08:00"）。
 	// 高峰时段等按服务器本地时间判定的窗口，前端展示时据此标注，避免用户按浏览器本地时间误读。
 	ServerTimezone              string  `json:"server_timezone"`

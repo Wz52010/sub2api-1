@@ -18,6 +18,13 @@ type SettingHandler struct {
 	settingService           *service.SettingService
 	notificationEmailService *service.NotificationEmailService
 	version                  string
+	vendorMode               bool
+}
+
+// SetVendorMode 注入号商模式开关(不改构造签名,与 SetNotificationEmailService 同一模式)。
+// 前端据此把管理面菜单裁到六个模块;真正的接口裁剪在 VendorModeAdminGuard。
+func (h *SettingHandler) SetVendorMode(enabled bool) {
+	h.vendorMode = enabled
 }
 
 // NewSettingHandler 创建公开设置处理器
@@ -44,6 +51,7 @@ func (h *SettingHandler) GetPublicSettings(c *gin.Context) {
 	}
 
 	response.Success(c, dto.PublicSettings{
+		VendorMode:                          h.vendorMode,
 		RegistrationEnabled:                 settings.RegistrationEnabled,
 		EmailVerifyEnabled:                  settings.EmailVerifyEnabled,
 		ForceEmailOnThirdPartySignup:        settings.ForceEmailOnThirdPartySignup,

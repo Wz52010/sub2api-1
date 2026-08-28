@@ -834,6 +834,14 @@ router.beforeEach(async (to, _from, next) => {
   ]
   document.title = resolveRouteDocumentTitle(to, appStore.siteName, customMenuItems)
 
+  // 号商模式(供货商专用实例):管理面只保留六个模块,仪表盘等被服务端裁掉(404)。
+  // 各处登录后的 next('/admin/dashboard') 会重新走一遍本守卫,所以这一条规则即可
+  // 覆盖全部入口,把号商落到账号管理页,避免落在打不开的页面上。
+  if (appStore.cachedPublicSettings?.vendor_mode === true && to.path.startsWith('/admin/dashboard')) {
+    next('/admin/accounts')
+    return
+  }
+
   // Check if route requires authentication
   const requiresAuth = to.meta.requiresAuth !== false // Default to true
   const requiresAdmin = to.meta.requiresAdmin === true

@@ -612,6 +612,9 @@ type PublicSettingsInjectionPayload struct {
 	AffiliateEnabled             bool `json:"affiliate_enabled"`
 	RiskControlEnabled           bool `json:"risk_control_enabled"`
 	AllowUserViewErrorRequests   bool `json:"allow_user_view_error_requests"`
+	// VendorMode: 号商模式(供货商专用实例),前端据此把管理面菜单裁到六个模块。
+	// 必须与 handler/dto.PublicSettings 的同名字段并存(见本结构体顶部 INVARIANT)。
+	VendorMode bool `json:"vendor_mode"`
 }
 
 // GetPublicSettingsForInjection returns public settings in a format suitable for HTML injection.
@@ -623,6 +626,7 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 	}
 
 	return &PublicSettingsInjectionPayload{
+		VendorMode:                          s.cfg != nil && s.cfg.VendorMode.Enabled,
 		RegistrationEnabled:                 settings.RegistrationEnabled,
 		EmailVerifyEnabled:                  settings.EmailVerifyEnabled,
 		RegistrationEmailSuffixWhitelist:    settings.RegistrationEmailSuffixWhitelist,

@@ -85,6 +85,7 @@ type Config struct {
 	Pricing                 PricingConfig                 `mapstructure:"pricing"`
 	Gateway                 GatewayConfig                 `mapstructure:"gateway"`
 	ProviderPortal          ProviderPortalConfig          `mapstructure:"provider_portal"`
+	VendorMode              VendorModeConfig              `mapstructure:"vendor_mode"`
 	APIKeyAuth              APIKeyAuthCacheConfig         `mapstructure:"api_key_auth_cache"`
 	SubscriptionCache       SubscriptionCacheConfig       `mapstructure:"subscription_cache"`
 	SubscriptionMaintenance SubscriptionMaintenanceConfig `mapstructure:"subscription_maintenance"`
@@ -1334,6 +1335,16 @@ type ProviderPortalConfig struct {
 	DefaultDailyAddLimit int `mapstructure:"default_daily_add_limit"`
 }
 
+// VendorModeConfig 控制「号商模式」:用于给账号供货商单独部署的实例。
+// Enabled=true 时管理面只保留 分组/账号/代理(IP)/指纹/使用记录/API密钥 六个模块,
+// 其余 /api/v1/admin/* 子路径(用户、设置、备份、数据管理、运维、审计、订阅、卡密…)一律 404。
+// 这是接口层硬关(不只是隐藏菜单),号商直接调 API 也进不去。
+// 默认 false —— 主站实例不受任何影响。
+type VendorModeConfig struct {
+	// Enabled: 是否启用号商模式(管理面模块裁剪)。默认 false。
+	Enabled bool `mapstructure:"enabled"`
+}
+
 type TLSFingerprintConfig struct {
 	// Enabled: 是否全局启用TLS指纹功能
 	Enabled bool `mapstructure:"enabled"`
@@ -1934,6 +1945,7 @@ func setDefaults() {
 	viper.SetDefault("run_mode", RunModeStandard)
 
 	// Provider portal(供货商二级门户)——默认关闭,休眠部署
+	viper.SetDefault("vendor_mode.enabled", false)
 	viper.SetDefault("provider_portal.enabled", false)
 	viper.SetDefault("provider_portal.session_hours", 12)
 	viper.SetDefault("provider_portal.default_daily_add_limit", 50)

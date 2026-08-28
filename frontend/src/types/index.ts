@@ -254,6 +254,9 @@ export interface PublicSettings {
   github_oauth_enabled: boolean
   google_oauth_enabled: boolean
   backend_mode_enabled: boolean
+  // 号商模式(供货商专用实例):管理面菜单只保留六个模块。
+  // 真正的权限裁剪在服务端(VendorModeAdminGuard),此标志只用于隐藏入口。
+  vendor_mode?: boolean
   version: string
   // 服务器全局时区（IANA 名称与当前 UTC 偏移），高峰时段等服务端本地时间窗口的展示标注用；
   // 可选：注入的 __APP_CONFIG__ 旧缓存可能缺失

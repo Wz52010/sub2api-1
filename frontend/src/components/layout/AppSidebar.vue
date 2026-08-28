@@ -250,7 +250,15 @@ const isAdmin = computed(() => authStore.isAdmin)
 const sidebarNavRef = ref<HTMLElement | null>(null)
 const isDark = ref(document.documentElement.classList.contains('dark'))
 
-const homePath = computed(() => (isAdmin.value ? '/admin/dashboard' : '/dashboard'))
+// 号商模式(供货商专用实例):由服务端 /settings/public 下发,注入的 __APP_CONFIG__ 里也有,
+// 所以首屏即可判定、不会闪menu。
+const isVendorMode = computed(() => appStore.cachedPublicSettings?.vendor_mode === true)
+
+// 号商模式下仪表盘已被裁掉(服务端 404),落地页改为账号管理。
+const homePath = computed(() => {
+  if (!isAdmin.value) return '/dashboard'
+  return isVendorMode.value ? '/admin/accounts' : '/admin/dashboard'
+})
 
 // Track which parent nav groups are expanded
 const expandedGroups = ref<Set<string>>(new Set())
@@ -816,6 +824,23 @@ const adminNavItems = computed((): NavItem[] => {
   ]
 
   const visible = applyFeatureFlags(baseItems)
+
+  // 号商模式(供货商专用实例):管理面只保留六个模块 —— 分组 / 账号 / 指纹与连接 /
+  // IP(代理) / 使用记录 / API密钥。其余入口全部隐藏,且服务端已对这些接口返回 404
+  // (VendorModeAdminGuard),所以这里只是隐藏入口、不是唯一防线。
+  if (isVendorMode.value) {
+    const keep = [
+      '/admin/groups',
+      '/admin/accounts',
+      '/admin/fingerprint-isolation',
+      '/admin/proxies',
+      '/admin/usage',
+    ]
+    const vendorItems = visible.filter(item => keep.includes(item.path))
+    // API 密钥用用户侧页面(号商在这里发 key 给主站做内网对接)。
+    vendorItems.push({ path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon })
+    return vendorItems
+  }
 
   // 简单模式下，在系统设置前插入 API密钥
   if (authStore.isSimpleMode) {
