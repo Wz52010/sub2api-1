@@ -27,9 +27,16 @@ func RegisterProviderRoutes(
 	auth := g.Group("")
 	auth.Use(h.Provider.AuthMiddleware())
 	{
+		auth.GET("/dashboard", h.Provider.Dashboard)
 		auth.GET("/accounts", h.Provider.ListAccounts)
 		auth.POST("/accounts", h.Provider.CreateAccount)
 		auth.GET("/accounts/:id/usage", h.Provider.AccountUsage)
 		auth.DELETE("/accounts/:id", h.Provider.DeleteAccount)
+		auth.GET("/groups", h.Provider.ListGroups)
+		auth.GET("/proxies", h.Provider.ListProxies)
+		auth.POST("/proxies", h.Provider.CreateProxy)
+		auth.DELETE("/proxies/:id", h.Provider.DeleteProxy)
+		auth.GET("/usage", h.Provider.Usage)
+		auth.GET("/audit", h.Provider.AuditLogs)
 	}
 }

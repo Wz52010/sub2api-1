@@ -75,6 +75,61 @@ type ProviderRepository interface {
 	AccountOwnedBy(ctx context.Context, providerID, accountID int64) (bool, error)
 	// AccountUsageSince 汇总该账号自 since 起的 token/请求数。
 	AccountUsageSince(ctx context.Context, providerID, accountID int64, since time.Time) (*ProviderAccountUsage, error)
+	// --- v2 作用域板块 ---
+	Dashboard(ctx context.Context, providerID int64) (*ProviderDashboard, error)
+	ListGroups(ctx context.Context, ids []int64) ([]*ProviderGroupView, error)
+	CreateProxy(ctx context.Context, providerID int64, p *ProviderProxy, username, password string) (int64, error)
+	ListProxies(ctx context.Context, providerID int64) ([]*ProviderProxy, error)
+	DeleteProxy(ctx context.Context, providerID, proxyID int64) error
+	Usage(ctx context.Context, providerID int64, since time.Time) ([]*ProviderUsageRow, error)
+	InsertAudit(ctx context.Context, providerID int64, action, detail, ip string) error
+	ListAudit(ctx context.Context, providerID int64, limit int) ([]*ProviderAuditRow, error)
+}
+
+// ---- v2 作用域视图类型(全部按 provider_id 隔离,零用户/客户信息) ----
+
+type ProviderDashboard struct {
+	TotalAccounts     int            `json:"total_accounts"`
+	ByStatus          map[string]int `json:"by_status"`
+	TodayRequests     int64          `json:"today_requests"`
+	TodayInputTokens  int64          `json:"today_input_tokens"`
+	TodayOutputTokens int64          `json:"today_output_tokens"`
+	ProxyCount        int            `json:"proxy_count"`
+}
+
+// ProviderGroupView 只读分组(仅运营方设的分组标识,不含用户/定价细节)。
+type ProviderGroupView struct {
+	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	Platform string `json:"platform"`
+	Status   string `json:"status"`
+}
+
+type ProviderProxy struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	Protocol  string    `json:"protocol"`
+	Host      string    `json:"host"`
+	Port      int       `json:"port"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// ProviderUsageRow 按账号聚合用量(仅 token/请求数,无 user_id/api_key)。
+type ProviderUsageRow struct {
+	AccountID    int64  `json:"account_id"`
+	AccountName  string `json:"account_name"`
+	Requests     int64  `json:"requests"`
+	InputTokens  int64  `json:"input_tokens"`
+	OutputTokens int64  `json:"output_tokens"`
+}
+
+type ProviderAuditRow struct {
+	ID        int64     `json:"id"`
+	Action    string    `json:"action"`
+	Detail    string    `json:"detail"`
+	ClientIP  string    `json:"client_ip"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // providerClaims 供货商登录 JWT。typ=provider 使其无法被 user/admin 路由复用,反之亦然。
@@ -255,4 +310,46 @@ func (s *ProviderPortalService) AccountOwnedBy(ctx context.Context, providerID, 
 // AccountUsageSince 账号 token/请求用量汇总(不含金额)。
 func (s *ProviderPortalService) AccountUsageSince(ctx context.Context, providerID, accountID int64, since time.Time) (*ProviderAccountUsage, error) {
 	return s.repo.AccountUsageSince(ctx, providerID, accountID, since)
+}
+
+// ---- v2 作用域板块(全部经 repo 的 provider_id 过滤) ----
+
+func (s *ProviderPortalService) Dashboard(ctx context.Context, providerID int64) (*ProviderDashboard, error) {
+	return s.repo.Dashboard(ctx, providerID)
+}
+
+// AllowedGroups 只读:供货商被授权的分组(运营方设的,零用户信息)。
+func (s *ProviderPortalService) AllowedGroups(ctx context.Context, p *ProviderAccount) ([]*ProviderGroupView, error) {
+	if p == nil || len(p.AllowedGroupIDs) == 0 {
+		return []*ProviderGroupView{}, nil
+	}
+	return s.repo.ListGroups(ctx, p.AllowedGroupIDs)
+}
+
+func (s *ProviderPortalService) CreateProxy(ctx context.Context, providerID int64, p *ProviderProxy, username, password string) (int64, error) {
+	return s.repo.CreateProxy(ctx, providerID, p, username, password)
+}
+
+func (s *ProviderPortalService) ListProxies(ctx context.Context, providerID int64) ([]*ProviderProxy, error) {
+	return s.repo.ListProxies(ctx, providerID)
+}
+
+func (s *ProviderPortalService) DeleteProxy(ctx context.Context, providerID, proxyID int64) error {
+	return s.repo.DeleteProxy(ctx, providerID, proxyID)
+}
+
+func (s *ProviderPortalService) Usage(ctx context.Context, providerID int64, since time.Time) ([]*ProviderUsageRow, error) {
+	return s.repo.Usage(ctx, providerID, since)
+}
+
+func (s *ProviderPortalService) ListAudit(ctx context.Context, providerID int64, limit int) ([]*ProviderAuditRow, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 200
+	}
+	return s.repo.ListAudit(ctx, providerID, limit)
+}
+
+// LogAction 记供货商操作(best-effort,失败只忽略不影响主流程)。
+func (s *ProviderPortalService) LogAction(ctx context.Context, providerID int64, action, detail, ip string) {
+	_ = s.repo.InsertAudit(ctx, providerID, action, detail, ip)
 }
