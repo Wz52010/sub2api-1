@@ -102,6 +102,12 @@ export interface ProviderAuditRow {
   created_at: string
 }
 
+export interface ProviderOAuthAuthURL {
+  auth_url: string
+  session_id: string
+  state?: string
+}
+
 export const providerAPI = {
   async login(email: string, password: string): Promise<{ token: string; provider: ProviderInfo }> {
     const { data } = await providerClient.post('/provider/auth/login', { email, password })
@@ -161,5 +167,30 @@ export const providerAPI = {
   async audit(limit = 200): Promise<ProviderAuditRow[]> {
     const { data } = await providerClient.get('/provider/audit', { params: { limit } })
     return (data?.logs ?? []) as ProviderAuditRow[]
+  },
+  // ---- OAuth 授权建号(不经手原始密码/不发 key;换码后账号直接落进主池,打 provider_id 标签)----
+  async oauthAuthURL(payload: {
+    platform: string
+    proxy_id?: number
+    gemini_oauth_type?: string
+    gemini_tier_id?: string
+    gemini_project_id?: string
+  }): Promise<ProviderOAuthAuthURL> {
+    const { data } = await providerClient.post('/provider/oauth/authurl', payload)
+    return data
+  },
+  async oauthExchange(payload: {
+    platform: string
+    session_id: string
+    code: string
+    state?: string
+    proxy_id?: number
+    name: string
+    group_id: number
+    gemini_oauth_type?: string
+    gemini_tier_id?: string
+  }): Promise<{ id: number; status: string }> {
+    const { data } = await providerClient.post('/provider/oauth/exchange', payload)
+    return data
   },
 }

@@ -46,8 +46,22 @@ VALUES ('供货商A', 'vendorA@example.com', '<上一步的哈希>', '{10,18}', 
 | POST | `/api/v1/provider/accounts` | 提交凭据建号(见下) |
 | GET | `/api/v1/provider/accounts/:id/usage?window=day\|week\|month` | 该账号 token/请求用量 |
 | DELETE | `/api/v1/provider/accounts/:id` | 撤下自己的账号 |
+| POST | `/api/v1/provider/oauth/authurl` | **OAuth 授权**:生成授权链接(见下) |
+| POST | `/api/v1/provider/oauth/exchange` | **OAuth 换码 → 建号**(见下) |
 
-建号 body:`{"name","platform","type","credentials":{...},"group_id"}`;`credentials` 结构 = 你后台加该类账号时填的那套(如 setup-token/oauth 的 refresh_token,apikey 的 key)。
+建号 body(手工型 apikey/upstream):`{"name","platform","type","credentials":{...},"group_id"}`;`credentials` 结构 = 你后台加该类账号时填的那套(apikey 的 key、upstream 的 base_url+api_key)。
+
+## OAuth 授权建号(v3,主推:不经手原始密码、不发 key、底层直调)
+
+供货商只需登录 → 点授权 → 在自己浏览器跑一遍平台 OAuth,账号就**直接落进你的主调度池**(打 `provider_id` 标签、锁授权分组)。**原始 token 只在服务端流转,不回传浏览器**;换码复用 admin 面板同一套 `OpenAI/OAuth(Claude)/Gemini` OAuthService。
+
+支持平台:**ChatGPT · Codex(openai)、Claude(anthropic)、Gemini**。前端在「账户管理 → OAuth 授权」页,3 步向导:
+
+1. 选平台 + 填名称 + 选授权分组 →「生成授权链接」(`POST /oauth/authurl` body `{"platform":"anthropic|openai|gemini", "gemini_oauth_type?":"code_assist|google_one", "gemini_tier_id?","gemini_project_id?"}` → `{auth_url, session_id, state?}`)。
+2. 新标签打开链接完成授权。**OpenAI/Gemini** 授权后浏览器会跳到一个 localhost 打不开的回调页——把地址栏整条链接复制回来即可(前端自动抽 `code`+`state`);**Claude** 页面直接给授权码。
+3. 粘回授权码 →「完成授权」(`POST /oauth/exchange` body `{"platform","session_id","code","state?","name","group_id","gemini_oauth_type?","gemini_tier_id?"}`)→ 服务端换码→用官方凭据构造器落库→返回 `{id,status}`。
+
+> 隔离与手工建号同一处强制(`prepareOwnedAccount`):打 `provider_id`、锁 `allowed_group_ids`、名字 `[供N]` 前缀、每日新增配额、写审计日志。Gemini 的 `code_assist` 需 project_id;`ai_studio` 需运营方配置自有 OAuth Client(未配会由服务端明确报错)。
 
 ## 隔离与安全(服务端强制,供货商绕不过)
 

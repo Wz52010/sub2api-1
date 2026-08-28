@@ -317,7 +317,7 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 	// 供货商门户(手工接线,免 wire codegen):复用 db + adminService,flag 关时路由不注册。
 	providerRepository := repository.NewProviderRepository(db)
 	providerPortalService := service.NewProviderPortalService(providerRepository, configConfig.JWT.Secret, configConfig.ProviderPortal.SessionHours, configConfig.ProviderPortal.DefaultDailyAddLimit)
-	providerHandler := handler.NewProviderHandler(providerPortalService, adminService)
+	providerHandler := handler.NewProviderHandler(providerPortalService, adminService, openAIOAuthService, oAuthService, geminiOAuthService)
 	handlers := handler.ProvideHandlers(authHandler, userHandler, apiKeyHandler, usageHandler, redeemHandler, subscriptionHandler, announcementHandler, channelMonitorUserHandler, channelMonitorV2Handler, adminHandlers, gatewayHandler, openAIGatewayHandler, handlerSettingHandler, totpHandler, passkeyHandler, handlerPaymentHandler, paymentWebhookHandler, availableChannelHandler, modelPlazaHandler, asyncImageHandler, batchImageHandler, idempotencyCoordinator, idempotencyCleanupService, providerHandler)
 	jwtAuthMiddleware := middleware.NewJWTAuthMiddleware(authService, userService, settingService, auditLogService)
 	optionalJWTAuthMiddleware := middleware.NewOptionalJWTAuthMiddleware(authService, userService, settingService, auditLogService)
