@@ -42,12 +42,8 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/provider',
-    name: 'ProviderDashboard',
-    component: () => import('@/views/provider/ProviderDashboardView.vue'),
-    meta: {
-      requiresAuth: false,
-      title: '供货商门户'
-    },
+    component: () => import('@/views/provider/ProviderLayout.vue'),
+    meta: { requiresAuth: false, title: '供货商门户' },
     beforeEnter: (_to, _from, next) => {
       const providerStore = useProviderStore()
       providerStore.restore()
@@ -56,7 +52,16 @@ const routes: RouteRecordRaw[] = [
         return
       }
       next()
-    }
+    },
+    children: [
+      { path: '', redirect: '/provider/dashboard' },
+      { path: 'dashboard', name: 'ProviderDashboard', component: () => import('@/views/provider/ProviderDashboardView.vue'), meta: { requiresAuth: false, title: '仪表盘' } },
+      { path: 'accounts', name: 'ProviderAccounts', component: () => import('@/views/provider/ProviderAccountsView.vue'), meta: { requiresAuth: false, title: '账户管理' } },
+      { path: 'groups', name: 'ProviderGroups', component: () => import('@/views/provider/ProviderGroupsView.vue'), meta: { requiresAuth: false, title: '分组' } },
+      { path: 'proxies', name: 'ProviderProxies', component: () => import('@/views/provider/ProviderProxiesView.vue'), meta: { requiresAuth: false, title: 'IP 管理' } },
+      { path: 'usage', name: 'ProviderUsage', component: () => import('@/views/provider/ProviderUsageView.vue'), meta: { requiresAuth: false, title: '使用记录' } },
+      { path: 'audit', name: 'ProviderAudit', component: () => import('@/views/provider/ProviderAuditView.vue'), meta: { requiresAuth: false, title: '操作日志' } },
+    ]
   },
 
   // ==================== Public Routes ====================

@@ -60,6 +60,48 @@ export interface ProviderAccountUsage {
   output_tokens: number
 }
 
+export interface ProviderDashboard {
+  total_accounts: number
+  by_status: Record<string, number>
+  today_requests: number
+  today_input_tokens: number
+  today_output_tokens: number
+  proxy_count: number
+}
+
+export interface ProviderGroupView {
+  id: number
+  name: string
+  platform: string
+  status: string
+}
+
+export interface ProviderProxy {
+  id: number
+  name: string
+  protocol: string
+  host: string
+  port: number
+  status: string
+  created_at: string
+}
+
+export interface ProviderUsageRow {
+  account_id: number
+  account_name: string
+  requests: number
+  input_tokens: number
+  output_tokens: number
+}
+
+export interface ProviderAuditRow {
+  id: number
+  action: string
+  detail: string
+  client_ip: string
+  created_at: string
+}
+
 export const providerAPI = {
   async login(email: string, password: string): Promise<{ token: string; provider: ProviderInfo }> {
     const { data } = await providerClient.post('/provider/auth/login', { email, password })
@@ -85,5 +127,39 @@ export const providerAPI = {
   },
   async deleteAccount(id: number): Promise<void> {
     await providerClient.delete(`/provider/accounts/${id}`)
+  },
+  async dashboard(): Promise<ProviderDashboard> {
+    const { data } = await providerClient.get('/provider/dashboard')
+    return data
+  },
+  async groups(): Promise<ProviderGroupView[]> {
+    const { data } = await providerClient.get('/provider/groups')
+    return (data?.groups ?? []) as ProviderGroupView[]
+  },
+  async proxies(): Promise<ProviderProxy[]> {
+    const { data } = await providerClient.get('/provider/proxies')
+    return (data?.proxies ?? []) as ProviderProxy[]
+  },
+  async createProxy(payload: {
+    name: string
+    protocol: string
+    host: string
+    port: number
+    username?: string
+    password?: string
+  }): Promise<{ id: number }> {
+    const { data } = await providerClient.post('/provider/proxies', payload)
+    return data
+  },
+  async deleteProxy(id: number): Promise<void> {
+    await providerClient.delete(`/provider/proxies/${id}`)
+  },
+  async usage(window: 'day' | 'week' | 'month' = 'day'): Promise<ProviderUsageRow[]> {
+    const { data } = await providerClient.get('/provider/usage', { params: { window } })
+    return (data?.usage ?? []) as ProviderUsageRow[]
+  },
+  async audit(limit = 200): Promise<ProviderAuditRow[]> {
+    const { data } = await providerClient.get('/provider/audit', { params: { limit } })
+    return (data?.logs ?? []) as ProviderAuditRow[]
   },
 }
