@@ -1,0 +1,97 @@
+# =============================================================================
+# 号商(账号供货商)专用 sub2api 实例
+# =============================================================================
+# 用途:供货商在这里自己管账号(分组/账号/指纹/IP/使用记录/API密钥),
+#       发一个 API Key 给主站;主站以 base_url=http://sub2api-vendor:8080 绑成上游。
+#
+# 与主站的隔离:
+#   - 独立 database:sub2api_vendor(owner s2vendor;已验证读不到主库 accounts/users)
+#   - 独立 redis db:3(主站用 0)
+#   - 独立 JWT/TOTP 密钥、独立管理员账号、独立数据目录
+#   - 管理面模块裁剪:VENDOR_MODE_ENABLED=true → 只留六个模块,其余 /admin/* 一律 404
+#
+# 网络暴露:
+#   - 只绑 127.0.0.1:18090,外网不可达;不配公网域名、不进 nginx 反代。
+#   - 主站走容器网络内的 sub2api-vendor:8080 直连(同一 docker network)。
+#
+# 复用主站的 postgres / redis 容器(省资源);它们不对宿主机暴露端口。
+# =============================================================================
+
+services:
+  sub2api-vendor:
+    image: sub2api-custom:fp-20260828vendor
+    container_name: sub2api-vendor
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    ports:
+      # 仅本机可访问(外网不可达)。主站在容器网络内直连,不依赖这个映射。
+      - "127.0.0.1:18090:8080"
+    volumes:
+      - ./data:/app/data:Z
+    environment:
+      - AUTO_SETUP=true
+
+      # ---- 号商模式:管理面只保留 分组/账号/指纹/IP/使用记录/API密钥 ----
+      - VENDOR_MODE_ENABLED=true
+
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8080
+      - SERVER_MODE=release
+      - RUN_MODE=standard
+
+      # ---- 独立数据库(与主站同一 postgres 容器,但不同 database + 不同角色)----
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=s2vendor
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:?DATABASE_PASSWORD is required}
+      - DATABASE_DBNAME=sub2api_vendor
+      - DATABASE_SSLMODE=disable
+      - DATABASE_MAX_OPEN_CONNS=15
+      - DATABASE_MAX_IDLE_CONNS=5
+
+      # ---- 独立 redis 逻辑库(主站用 0)----
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=3
+      - REDIS_POOL_SIZE=64
+      - REDIS_MIN_IDLE_CONNS=4
+
+      # ---- 号商自己的管理员(与主站账号体系无关)----
+      - ADMIN_EMAIL=${VENDOR_ADMIN_EMAIL:-vendor@local}
+      - ADMIN_PASSWORD=${VENDOR_ADMIN_PASSWORD:?VENDOR_ADMIN_PASSWORD is required}
+
+      # ---- 独立密钥(与主站不同,token 互不通用)----
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - JWT_EXPIRE_HOUR=24
+      - TOTP_ENCRYPTION_KEY=${TOTP_ENCRYPTION_KEY:?TOTP_ENCRYPTION_KEY is required}
+
+      - TZ=Asia/Shanghai
+
+      # ---- 出站指纹(与主站一致,号商账号也需要)----
+      - GATEWAY_OPENAI_HTTP2_ENABLED=true
+      - GATEWAY_TLS_FINGERPRINT_HTTP2_ENABLED=true
+      - GATEWAY_TLS_FINGERPRINT_HTTP2_FRAME_FINGERPRINT_ENABLED=true
+      - GATEWAY_TLS_FINGERPRINT_OPENAI_ENABLED=true
+      - GATEWAY_TLS_FINGERPRINT_IDENTITY_OS_SYNC=true
+
+      - SECURITY_URL_ALLOWLIST_ENABLED=false
+      - SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS=true
+    networks:
+      - sub2api-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "5", "-O", "/dev/null", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  # 复用主站已建的网络,以便直连 postgres/redis,并让主站能用容器名访问本实例。
+  sub2api-network:
+    external: true
+    name: deploy_sub2api-network

@@ -71,17 +71,33 @@ docker compose down           # 停止(不删数据)
 > `base_url` 用**容器名** `sub2api-vendor:8080`(两个容器在同一 docker 网络 `deploy_sub2api-network`),
 > 走容器内网、不经公网、几乎零延迟。也可用 `http://127.0.0.1:18090`,但容器名更稳。
 
-## 五、外网访问的取舍(需要你决策)
+## 五、两条通道分离(已上线)
 
-当前按你的要求**只绑内网**,因此号商**无法从外网登录**。若他需要远程自助管账号,三选一:
+按「**key 只走本地、UI 走外网**」拆成两条通道:
 
-| 方案 | 说明 | 对外暴露 |
-|---|---|---|
-| SSH 隧道 | 给他一个受限 SSH 账号,`ssh -L 18090:127.0.0.1:18090` | 无(推荐) |
-| WireGuard/VPN | 他进内网后访问 | 无 |
-| 子域名 + IP 白名单 | 如 `vendor.aspai.top`,nginx 限他的固定 IP | 有(与"不对外网"相悖) |
+| 通道 | 入口 | 谁用 | 状态 |
+|---|---|---|---|
+| **前端 UI / 登录 / OAuth 授权** | `https://vendor.aspai.top`(公网,Cloudflare 橙云 + 复用 aspai.top 证书) | 号商本人 | 开放 |
+| **API Key 数据面(网关)** | `http://sub2api-vendor:8080`(docker 内网) | 只有主站 | **公网一律 404** |
 
-不需要他自助时,维持现状最安全:你自己在本机替他操作。
+实现:`deploy/vendor/nginx-vendor.aspai.top.conf`(已装到 `/www/server/panel/vhost/nginx/`)。
+关键分界——**网关路径都在根级**(`/v1`、`/responses`、`/chat/completions`、`/models`…),
+而**面板 API 在 `/api/v1/` 之下**,因此可以精确地"只放 UI、堵死 key":
+
+```nginx
+location ~ ^/(v1|v1beta|responses|chat/completions|messages|models|embeddings|images|videos|tts|stt|realtime|antigravity|backend-api|alpha|custom-voices)(/|$) {
+    return 404;
+}
+```
+
+**公网实测**:UI `/`、`/login`、`/api/v1/settings/public` 全 200;
+`/v1/*`、`/responses`、`/chat/completions`、`/models`、`/images/generations`、`/embeddings` 等全 404;
+**带 Bearer 从公网调 `/v1/chat/completions` 同样 404**(即使 key 泄露也无法从外网使用)。
+内网侧 `sub2api → sub2api-vendor:8080` `/health` 200、`/v1/models` 401(要 key,正确)。
+
+> ⚠️ 面板已暴露公网:请尽快改掉初始密码并开 2FA。
+> ⚠️ 改 nginx 必须用**宝塔**的二进制:`/www/server/nginx/sbin/nginx -t`。
+> 直接敲 `nginx -t` 测的是已 mask 的发行版配置,会误判(见历史事故)。
 
 ## 六、回滚 / 清理
 
