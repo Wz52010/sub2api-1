@@ -84,6 +84,7 @@ type Config struct {
 	RateLimit               RateLimitConfig               `mapstructure:"rate_limit"`
 	Pricing                 PricingConfig                 `mapstructure:"pricing"`
 	Gateway                 GatewayConfig                 `mapstructure:"gateway"`
+	ProviderPortal          ProviderPortalConfig          `mapstructure:"provider_portal"`
 	APIKeyAuth              APIKeyAuthCacheConfig         `mapstructure:"api_key_auth_cache"`
 	SubscriptionCache       SubscriptionCacheConfig       `mapstructure:"subscription_cache"`
 	SubscriptionMaintenance SubscriptionMaintenanceConfig `mapstructure:"subscription_maintenance"`
@@ -1322,6 +1323,17 @@ type GatewayUsageRecordConfig struct {
 
 // TLSFingerprintConfig TLS指纹伪装配置
 // 用于模拟 Claude CLI (Node.js) 的 TLS 握手特征，避免被识别为非官方客户端
+// ProviderPortalConfig 控制「账户供货商二级门户」。默认关闭:整套 /api/v1/provider/*
+// 路由与登录入口在 Enabled=false 时不注册,对现有用户零影响,可即时回滚。
+type ProviderPortalConfig struct {
+	// Enabled: 是否启用供货商门户(路由+登录)。默认 false(休眠)。
+	Enabled bool `mapstructure:"enabled"`
+	// SessionHours: 供货商登录 JWT 有效期(小时)。默认 12。
+	SessionHours int `mapstructure:"session_hours"`
+	// DefaultDailyAddLimit: 每个供货商每日新增账户上限(0=不限)。默认 50。
+	DefaultDailyAddLimit int `mapstructure:"default_daily_add_limit"`
+}
+
 type TLSFingerprintConfig struct {
 	// Enabled: 是否全局启用TLS指纹功能
 	Enabled bool `mapstructure:"enabled"`
@@ -1920,6 +1932,11 @@ func configureConfigSource(setConfigFile, addConfigPath func(string)) {
 
 func setDefaults() {
 	viper.SetDefault("run_mode", RunModeStandard)
+
+	// Provider portal(供货商二级门户)——默认关闭,休眠部署
+	viper.SetDefault("provider_portal.enabled", false)
+	viper.SetDefault("provider_portal.session_hours", 12)
+	viper.SetDefault("provider_portal.default_daily_add_limit", 50)
 
 	// Server
 	viper.SetDefault("server.host", "0.0.0.0")
