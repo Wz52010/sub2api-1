@@ -24,8 +24,9 @@
         >
           {{ siteName }}
         </router-link>
-        <!-- Version Badge -->
-        <VersionBadge :version="siteVersion" />
+        <!-- Version Badge —— 号商模式隐藏:它带在线更新/回滚入口,号商不该动运营方的服务器。
+             服务端也已把 /admin/system/* 整组 404(VendorModeAdminGuard),此处只是不显示入口。 -->
+        <VersionBadge v-if="!isVendorMode" :version="siteVersion" />
       </div>
     </div>
 

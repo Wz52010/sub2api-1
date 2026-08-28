@@ -19,7 +19,7 @@
 
 services:
   sub2api-vendor:
-    image: sub2api-custom:fp-20260828vendor
+    image: sub2api-custom:fp-20260828vendor2
     container_name: sub2api-vendor
     restart: unless-stopped
     security_opt:

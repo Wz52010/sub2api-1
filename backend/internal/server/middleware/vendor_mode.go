@@ -32,8 +32,14 @@ var vendorModeAllowedAdminPrefixes = []string{
 	"usage",
 	// 6) API 密钥(号商发 key 给主站做内网对接)
 	"api-keys",
-	// 支撑项:分组管理页依赖渠道列表;合规确认是进入管理面的前置;system 提供版本/健康信息。
-	"channels", "compliance", "system",
+	// 支撑项:分组管理页依赖渠道列表;合规确认是进入管理面的前置。
+	"channels", "compliance",
+	// 注意:**不要**放行 "system"。/admin/system 组里含
+	//   POST /system/update    (在线更新)
+	//   POST /system/rollback  (版本回滚)
+	//   POST /system/restart   (重启服务)
+	// 放行它等于把运营方服务器的更新/重启权交给号商。版本号对号商无用,
+	// 前端也已在号商模式隐藏 VersionBadge(它就是这组接口的入口)。
 }
 
 // vendorModeAdminPathAllowed 判断 /api/v1/admin 之后的剩余路径是否在白名单内。

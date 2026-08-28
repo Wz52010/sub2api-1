@@ -15,6 +15,7 @@
 | 模块 | 路径 | 后端白名单前缀 |
 |---|---|---|
 | 分组管理 | `/admin/groups` | `groups`(+ `channels` 依赖) |
+| ~~系统/版本~~ | — | **故意不放行 `system`**(见下方警告) |
 | 账号管理 | `/admin/accounts` | `accounts`, `openai`, `gemini`, `antigravity`, `grok` |
 | 指纹与连接 | `/admin/fingerprint-isolation` | `tls-fingerprint-profiles` |
 | IP 管理 | `/admin/proxies` | `proxies` |
@@ -24,6 +25,11 @@
 **其余 `/api/v1/admin/*` 一律 404**:用户管理、系统设置、数据管理、数据库备份、运维监控(Ops)、
 操作审计、订阅、卡密、优惠码、公告、风控、提示词审计、邀请返利、渠道监控、仪表盘……
 
+> ⛔ **绝不要把 `system` 加进白名单**。`/admin/system` 组里含
+> `POST /system/update`(在线更新)、`POST /system/rollback`(回滚)、`POST /system/restart`(重启服务)——
+> 放行它等于把运营方服务器的更新/重启权交给号商。前端的版本徽标(`VersionBadge`)就是这组接口的入口,
+> 已在号商模式隐藏。号商实例因此也不会去 GitHub 检查更新。
+>
 > 裁剪在**接口层**(`middleware.VendorModeAdminGuard`),不是只藏菜单——号商直接调 API 也进不去。
 > 返回 404 而非 403,不泄露"功能存在但被禁用"。
 > 网关 `/v1/*` **不受影响**(主站正是靠它调用号商实例)。
