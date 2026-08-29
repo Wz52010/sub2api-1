@@ -163,8 +163,10 @@
                   {{ t('nav.apiKeys') }}
                 </router-link>
 
+                <!-- 号商模式隐藏:该链接指向上游开源仓库,会暴露运营方所用系统,
+                     且号商没有任何理由需要它。 -->
                 <a
-                  v-if="authStore.isAdmin"
+                  v-if="authStore.isAdmin && !isVendorMode"
                   href="https://github.com/Wei-Shaw/sub2api"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -269,6 +271,10 @@ const appStore = useAppStore()
 const authStore = useAuthStore()
 const adminSettingsStore = useAdminSettingsStore()
 const onboardingStore = useOnboardingStore()
+
+// 号商模式(供货商专用实例):由服务端 /settings/public 下发,注入的 __APP_CONFIG__ 里也有,
+// 首屏即可判定。用于隐藏不该给号商看的入口(如上游仓库链接)。
+const isVendorMode = computed(() => appStore.cachedPublicSettings?.vendor_mode === true)
 
 const user = computed(() => authStore.user)
 const dropdownOpen = ref(false)

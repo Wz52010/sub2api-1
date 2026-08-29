@@ -459,7 +459,9 @@
           >
             {{ t('home.docs') }}
           </a>
+          <!-- 号商模式隐藏:页脚的上游仓库链接会暴露运营方所用系统。 -->
           <a
+            v-if="!isVendorMode"
             :href="githubUrl"
             target="_blank"
             rel="noopener noreferrer"
@@ -506,6 +508,8 @@ const isDark = ref(document.documentElement.classList.contains('dark'))
 
 // GitHub URL
 const githubUrl = 'https://github.com/Wei-Shaw/sub2api'
+// 号商模式(供货商专用实例):隐藏页脚的上游仓库链接。
+const isVendorMode = computed(() => appStore.cachedPublicSettings?.vendor_mode === true)
 
 // Auth state
 const isAuthenticated = computed(() => authStore.isAuthenticated)
